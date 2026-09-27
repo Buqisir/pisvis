@@ -9,12 +9,14 @@ test('arrow renders, inputs redraw, invalid input keeps last graphic, zoom and r
   await page.goto('/');
 
   const status = page.locator('#status');
+  const readout = page.locator('#readout');
   const svg = page.locator('#canvas svg');
   const tip = svg.locator('polygon');
 
   await expect(svg).toBeVisible();
   await expect(tip).toBeVisible();
-  await expect(status).toHaveText(/长度 4\.472/);
+  await expect(readout).toHaveText(/长度 4\.472/);
+  await expect(readout).toHaveText(/方向 26\.6°/);
   await expect(tip).toHaveAttribute('points', /^420,130 /);
 
   await page.screenshot({
@@ -24,7 +26,7 @@ test('arrow renders, inputs redraw, invalid input keeps last graphic, zoom and r
 
   // Editing a number input redraws the arrow (bx 2 -> 1: tip x 420 -> 370).
   await page.locator('#bx').fill('1');
-  await expect(status).toHaveText(/长度 3\.606/);
+  await expect(readout).toHaveText(/长度 3\.606/);
   await expect(tip).toHaveAttribute('points', /^370,130 /);
 
   // Out-of-range input reports the error and keeps the last valid drawing.
@@ -36,7 +38,8 @@ test('arrow renders, inputs redraw, invalid input keeps last graphic, zoom and r
   await page.locator('#ax').fill('');
   await expect(status).toHaveText(/请填写范围内的有限数值/);
   await page.locator('#ax').fill('-2');
-  await expect(status).toHaveText(/长度 3\.606/);
+  await expect(status).toHaveText('');
+  await expect(readout).toHaveText(/长度 3\.606/);
 
   // Zoom slider rescales the drawing (zoom 50 -> 20: tip x 370 -> 340).
   await page.locator('#zoom').fill('20');
@@ -49,6 +52,7 @@ test('arrow renders, inputs redraw, invalid input keeps last graphic, zoom and r
   await expect(page.locator('#ax')).toHaveValue('-2');
   await expect(page.locator('#bx')).toHaveValue('2');
   await expect(page.locator('#zoom')).toHaveValue('50');
-  await expect(status).toHaveText(/长度 4\.472/);
+  await expect(status).toHaveText('');
+  await expect(readout).toHaveText(/长度 4\.472/);
   await expect(tip).toHaveAttribute('points', /^420,130 /);
 });

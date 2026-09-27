@@ -11,7 +11,8 @@ description: Use verified pisvis capabilities to author checkable teaching diagr
 ## 先发现真实能力
 
 读 README、src/index.ts、当前阶段 Issue 与 docs/HANDOFF.md。
-此轮文档更新后的真实实现仍只有向量、世界/SVG 坐标映射、箭头几何和 renderArrowSvg。
+当前真实实现：向量、世界/SVG 坐标映射、二维仿射变换（applyAffine/invertAffine）、箭头几何和 renderArrowSvg。
+实验页的端点拖动是演示层交互，不是可调用的库 API。
 模板、自动受力分析、平抛模型、场景 JSON、Signals/Valibot、Motion/KaTeX 尚未集成。
 不能把 TECH_RADAR 中的候选写成已经调用成功的接口。
 

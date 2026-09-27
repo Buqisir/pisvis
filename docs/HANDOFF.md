@@ -55,3 +55,50 @@ M1 小内核继续零运行时依赖；新产品方向允许 M2/M3 在实例/校
 
 先核对最新 main 和进行中的 PR，已经实际完成的工作以新证据为准，不因为本记录历史状态而重复覆盖。
 后续结果用追加记录说明提交、环境、命令、浏览器、证据和未测项，不抹去初始化时的限制。
+
+## D. M1 实施记录
+
+日期：2026-09-28（UTC+08）。实现 [Issue #1](https://github.com/Buqisir/pisvis/issues/1)：
+工程复现（A，提交 cc0b22f）与原生 SVG 端点拖动（B，提交 <commit>）。
+
+### 环境
+
+macOS 本机；Node 24.15.0 / npm 11.12.1（Homebrew node@24，对应 .nvmrc 的 24）。
+TypeScript 6.0.3（由 5.8.3 升级，tsconfig 无需改动）、Vite 8.3.0（由 8.0.10）、
+新增开发依赖 @playwright/test 1.63.0（Chromium build 1243）。核心运行时依赖仍为零。
+GitHub Actions 固定到 v7 系列完整提交 SHA（checkout v7.0.1、setup-node v7.0.0、upload-artifact v7.0.1）。
+
+### 实际执行
+
+- `rm -rf node_modules dist demo-dist && npm ci && npm run check && npm run build:demo`：全部通过；
+  dist/ 仅含 src 的 ESM .js 与 .d.ts，demo-dist 不污染库输出；npm audit 0 漏洞。
+- `node --test tests/*.test.mjs`：30 通过 / 0 失败（初始化 25 + 本轮 affine 5）。
+- `npm run test:browser`（Chromium，vite preview 127.0.0.1:4173）：19 通过 / 0 失败。
+  代表性截图：test-results/screenshots/{drag-default,coincident-separated,invalid-input,mobile-layout,playground-arrow}.png（gitignored，不入库）。
+
+### 本轮新增能力
+
+- `src/core/affine.ts`：`applyAffine` / `invertAffine`，DOMMatrix 同构、无 DOM 依赖；
+  det 为零或低于 EPSILON*s² 阈值返回 null，逆矩阵出现非有限值返回 null，输入非有限抛 RangeError。
+- playground 重写为单一状态 `{start, end, zoom, selected}`：输入、SVG、拖动手柄、读数全部由其导出；
+  number 输入改 `step="any"` 且只解析触发事件的字段（显示值舍入不回流状态）；
+  原生 Pointer Events + `getScreenCTM()` 逆变换做 client→世界换算，演示层夹取 x∈[-4,4]、y∈[-2,2]；
+  重合端点经「当前端点」单选（键盘可用）分离，选中手柄渲染在最上层；
+  指针捕获挂在稳定的 #canvas 宿主上（SVG 每帧重建），覆盖 pointerup/cancel/lostpointercapture；
+  非法输入置 aria-invalid、保留最后有效图形；#status 只承载错误与单次拖动结束提示，
+  #readout（非 live）显示起点/终点/长度/方向。
+- `.github/workflows/ci.yml`：push 到 main 与 PR 触发，permissions 只读，
+  npm ci → check → build:demo → 安装 Chromium → 浏览器测试，失败时上传 playwright-report。
+
+### 已修复的既有问题
+
+初始化演示在 form reset 时用 queueMicrotask 重绘：微任务在浏览器恢复控件默认值之前运行，
+导致重置后图形停在旧值、输入与图形脱节（实测输入已复原而读数仍显示旧长度）。
+改为 setTimeout 调度（A 部分提交内已含）。
+
+### 未验证 / 已知限制
+
+- 浏览器测试仅 Chromium；Firefox、WebKit 与真实触摸设备未验收。
+- 每次 pointermove 重建整个 SVG（含手柄）；当前规模可接受，未做增量更新。
+- 无滚轮缩放/平移；缩放范围固定 20–60；标签固定不避让。
+- 方向读数为相对 +x 轴的角度（1 位小数）；零向量显示「—」。
