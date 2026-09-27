@@ -107,7 +107,7 @@ GitHub Actions 固定到 v7 系列完整提交 SHA（checkout v7.0.1、setup-nod
 ## E. M2-A 视觉候选记录
 
 日期：2026-09-28（UTC+08）。实现 [Issue #3](https://github.com/Buqisir/pisvis/issues/3) 的 A 部分：
-主题 token、CSS 适配、场景序列化、视口自适应与双候选样板页。提交 <commit>。
+主题 token、CSS 适配、场景序列化、视口自适应与双候选样板页。提交 f6823be。
 两套主题均为候选，维护者尚未选择。
 
 ### 环境
