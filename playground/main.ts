@@ -38,5 +38,5 @@ function draw(): void {
 }
 form.addEventListener('submit', (event) => event.preventDefault());
 form.addEventListener('input', draw);
-form.addEventListener('reset', () => queueMicrotask(draw));
+form.addEventListener('reset', () => setTimeout(draw));
 draw();
