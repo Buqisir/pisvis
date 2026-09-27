@@ -37,12 +37,13 @@ export interface ThemeDefinition {
   readonly text: {
     readonly family: string;
     readonly variableFamily: string;
+    readonly numericFamily: string;
     readonly label: number;
     readonly value: number;
     readonly caption: number;
   };
   readonly space: { readonly labelOffset: number; readonly safeMargin: number };
-  readonly material: 'soft' | 'flat';
+  readonly material: 'soft' | 'flat' | 'glow';
   readonly motion: { readonly emphasisMs: number; readonly easing: string };
 }
 
@@ -56,7 +57,7 @@ const EASING_PATTERN = new RegExp(
   'cubic-bezier\\(-?\\d*\\.?\\d+,\\s*-?\\d*\\.?\\d+,\\s*-?\\d*\\.?\\d+,\\s*-?\\d*\\.?\\d+\\)|' +
   'steps\\(\\d+(,\\s*(jump-start|jump-end|jump-none|jump-both|start|end))?\\))$',
 );
-const MATERIALS = new Set(['soft', 'flat']);
+const MATERIALS = new Set(['soft', 'flat', 'glow']);
 
 function checkNumber(value: number, name: string, min: number): void {
   finite(value, name);
@@ -112,6 +113,7 @@ export function checkTheme(theme: ThemeDefinition): ThemeDefinition {
   checkString(theme.dash.component, DASH_PATTERN, 'dash.component');
   checkString(theme.text.family, FONT_PATTERN, 'text.family');
   checkString(theme.text.variableFamily, FONT_PATTERN, 'text.variableFamily');
+  checkString(theme.text.numericFamily, FONT_PATTERN, 'text.numericFamily');
   positive(theme.text.label, 'text.label');
   positive(theme.text.value, 'text.value');
   positive(theme.text.caption, 'text.caption');

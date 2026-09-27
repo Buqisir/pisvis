@@ -32,6 +32,7 @@ export function themeToCssText(theme: ThemeDefinition, selector: string): string
     `--pv-dash-component:${theme.dash.component}`,
     `--pv-font-family:${theme.text.family}`,
     `--pv-font-variable:${theme.text.variableFamily}`,
+    `--pv-font-numeric:${theme.text.numericFamily}`,
     `--pv-text-label:${px(theme.text.label)}`,
     `--pv-text-value:${px(theme.text.value)}`,
     `--pv-text-caption:${px(theme.text.caption)}`,

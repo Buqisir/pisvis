@@ -3,6 +3,13 @@ import { expect, test, type Page } from '@playwright/test';
 // Gallery is the second vite page; scene SVGs are pure-string renders mounted
 // into themed stage containers. Geometry lives in the viewBox coordinate space.
 
+const THEMES = [
+  ['#theme-a', 'candidate-illustrated'],
+  ['#theme-b', 'candidate-linework'],
+  ['#theme-c', 'candidate-instrument'],
+] as const;
+const SVG_COUNT = 19; // 13 specimen cells + 1 composition + 1 decomposition + 4 edge panels
+
 async function arrowGeo(page: Page) {
   return page.evaluate(() => {
     const out: Record<string, string[]> = {};
@@ -13,7 +20,7 @@ async function arrowGeo(page: Page) {
       if (id && line && poly) {
         out[id] = [
           line.getAttribute('x1')!, line.getAttribute('y1')!,
-          poly.getAttribute('points')!.split(' ')[0],
+          poly.getAttribute('points')!.split(' ')[0]!,
         ];
       }
     }
@@ -25,25 +32,121 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/gallery.html');
 });
 
-test('loads with all four sections; both themes render in compare mode', async ({ page }) => {
+test('loads; all three themes render; compare shows 3 stages per scene', async ({ page }) => {
+  // screenshots are taken of the final static state; reduce motion so no
+  // entrance is in flight and the linkage demo never autostarts
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+
   await expect(page.locator('.specimen')).toHaveCount(4);
-  // 13 specimen cells + 1 composition + 1 decomposition + 4 edge panels
-  await expect(page.locator('.specimen svg.pv-scene')).toHaveCount(19);
+  await expect(page.locator('.specimen svg.pv-scene')).toHaveCount(SVG_COUNT);
   await page.screenshot({ path: 'test-results/screenshots/gallery-a.png', fullPage: true });
 
   await page.locator('#theme-b').check();
   await page.screenshot({ path: 'test-results/screenshots/gallery-b.png', fullPage: true });
 
+  await page.locator('#theme-c').check();
+  await expect(page.locator('[data-pv-theme="candidate-instrument"] svg')).toHaveCount(SVG_COUNT);
+  await expect(page.locator('body')).toHaveAttribute('data-pv-page', 'dark');
+  await page.screenshot({ path: 'test-results/screenshots/gallery-c.png', fullPage: true });
+
   await page.locator('#theme-both').check();
-  await expect(page.locator('svg.pv-scene')).toHaveCount(38);
-  await expect(page.locator('[data-pv-theme="candidate-illustrated"] svg')).toHaveCount(19);
-  await expect(page.locator('[data-pv-theme="candidate-linework"] svg')).toHaveCount(19);
+  await expect(page.locator('svg.pv-scene')).toHaveCount(3 * SVG_COUNT);
+  for (const [, id] of THEMES) {
+    await expect(page.locator(`[data-pv-theme="${id}"] svg`)).toHaveCount(SVG_COUNT);
+  }
+  // compare mode: only the stages are themed, the page itself stays light
+  await expect(page.locator('body')).not.toHaveAttribute('data-pv-page', 'dark');
   await page.screenshot({ path: 'test-results/screenshots/gallery-compare.png', fullPage: true });
 });
 
-for (const themeRadio of ['#theme-a', '#theme-b']) {
-  test(`no two text elements overlap within any svg (${themeRadio})`, async ({ page }) => {
-    await page.locator(themeRadio).check();
+for (const [radio] of THEMES) {
+  test(`every painted shape has a role/axis fill, never default black (${radio})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.reload();
+    await page.locator(radio).check();
+    const bad = await page.evaluate(() => {
+      const out: string[] = [];
+      // var(--pv-role) lives on the role group, so probes must be mounted
+      // inside the element whose scope we want to resolve
+      const probe = (host: Element, varName: string): string => {
+        const tmp = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        (tmp as SVGRectElement).style.fill = `var(${varName})`;
+        host.append(tmp);
+        const v = getComputedStyle(tmp).fill;
+        tmp.remove();
+        return v;
+      };
+      for (const svg of document.querySelectorAll('svg')) {
+        const paper = probe(svg, '--pv-paper');
+        const axis = probe(svg, '--pv-axis');
+        for (const el of svg.querySelectorAll(
+          '.pv-head, .pv-dot, .pv-handle-dot, .pv-zero, .pv-axis-head')) {
+          const cls = el.getAttribute('class')!;
+          const fill = getComputedStyle(el).fill;
+          const group = el.closest('[class*="pv-role-"]');
+          const stroke = getComputedStyle(el).stroke;
+          const isGradient = fill.startsWith('url(');
+          const hollowByDesign = fill === paper; // flat dots are hollow: stroke carries the role
+          let paintedOk: boolean;
+          if (cls.includes('axis-head')) {
+            paintedOk = isGradient || fill === axis;
+          } else {
+            // role fill; selected states may legitimately paint --pv-selection
+            const accepts = group
+              ? [probe(group, '--pv-role'), probe(group, '--pv-selection')]
+              : [];
+            paintedOk = isGradient || accepts.includes(fill) ||
+              (hollowByDesign && accepts.includes(stroke));
+          }
+          if (!paintedOk || fill === 'none' || fill === 'rgb(0, 0, 0)') {
+            out.push(`${svg.getAttribute('aria-labelledby')}:${cls} fill=${fill} stroke=${stroke}`);
+          }
+        }
+      }
+      return out;
+    });
+    expect(bad).toEqual([]);
+  });
+}
+
+test('candidate C labels read >=13px effective at 1280px wide', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  await page.locator('#theme-c').check();
+  const minFont = await page.evaluate(() => {
+    let min = Infinity;
+    for (const t of document.querySelectorAll('svg .pv-label, svg .pv-tick')) {
+      const svg = t.closest('svg')!;
+      const scale = svg.getBoundingClientRect().width / (svg as SVGSVGElement).viewBox.baseVal.width;
+      const eff = Number.parseFloat(getComputedStyle(t).fontSize) * scale;
+      if (eff < min) min = eff;
+    }
+    return min;
+  });
+  expect(minFont).toBeGreaterThanOrEqual(12.5); // ~13 nominal with rounding slack
+});
+
+test('candidate C page chrome is dark only in single-C mode', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  const bodyBg = () => page.evaluate(() =>
+    getComputedStyle(document.body).backgroundColor);
+  const light = await bodyBg();
+  await page.locator('#theme-c').check();
+  const dark = await bodyBg();
+  const channels = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(dark)!.slice(1).map(Number);
+  for (const c of channels) expect(c).toBeLessThan(40);
+  expect(dark).not.toBe(light);
+  await page.locator('#theme-a').check();
+  expect(await bodyBg()).toBe(light);
+});
+
+for (const [radio] of THEMES) {
+  test(`no two text elements overlap within any svg (${radio})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.reload();
+    await page.locator(radio).check();
     const collisions = await page.evaluate(() => {
       const bad: string[] = [];
       for (const svg of document.querySelectorAll('svg')) {
@@ -66,12 +169,16 @@ for (const themeRadio of ['#theme-a', '#theme-b']) {
   });
 }
 
-test('theme switching changes no readouts and no arrow geometry', async ({ page }) => {
-  const readoutsA = await page.locator('.scene-readout').allTextContents();
+test('theme switching changes no readouts and no arrow geometry (A/B/C)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
   const geoA = await arrowGeo(page);
-  await page.locator('#theme-b').check();
-  expect(await arrowGeo(page)).toEqual(geoA);
-  expect(await page.locator('.scene-readout').allTextContents()).toEqual(readoutsA);
+  const readoutsA = await page.locator('.scene-readout').allTextContents();
+  for (const [radio] of [['#theme-b'], ['#theme-c'], ['#theme-a']] as const) {
+    await page.locator(radio).check();
+    expect(await arrowGeo(page)).toEqual(geoA);
+    expect(await page.locator('.scene-readout').allTextContents()).toEqual(readoutsA);
+  }
 });
 
 test('side-by-side mode: ids are unique and every url(#) resolves inside its svg', async ({ page }) => {
@@ -101,25 +208,43 @@ test('grayscale toggle applies the filter to the stage root', async ({ page }) =
   await page.screenshot({ path: 'test-results/screenshots/gallery-grayscale.png', fullPage: true });
 });
 
-test('reduced-motion checkbox zeroes transition durations', async ({ page }) => {
+test('reduced-motion checkbox zeroes transitions and disables the demo', async ({ page }) => {
   await page.locator('#opt-motion').check();
   const dur = await page.locator('.pv-ring').first()
     .evaluate((el) => getComputedStyle(el).transitionDuration);
   expect(dur).toBe('0s');
+  // scroll everything into view — nothing may animate and the demo stays off
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll('.cell, .stage-outer')) el.scrollIntoView();
+  });
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await expect(page.locator('#demo-toggle')).toBeDisabled();
+  await expect(page.locator('#demo-note')).toHaveText('减少动效已开启');
+  expect(await page.evaluate(() => window.__pvDemo.loops)).toBe(0);
 });
 
 test.describe('emulated reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
-  test('prefers-reduced-motion zeroes transition durations', async ({ page }) => {
-    const dur = await page.locator('.pv-ring').first()
-      .evaluate((el) => getComputedStyle(el).transitionDuration);
-    expect(dur).toBe('0s');
+  test('prefers-reduced-motion: no entrance, no autostart, demo disabled', async ({ page }) => {
+    await page.evaluate(() => {
+      for (const el of document.querySelectorAll('.cell, .stage-outer')) el.scrollIntoView();
+    });
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+    await expect(page.locator('#demo-toggle')).toBeDisabled();
+    expect(await page.evaluate(() => window.__pvDemo.loops)).toBe(0);
+    const ringAnim = await page.locator('.pv-state-selected .pv-ring').first()
+      .evaluate((el) => getComputedStyle(el).animationName);
+    expect(ringAnim).toBe('none');
   });
 });
 
 for (const size of [{ width: 1280, height: 800 }, { width: 600, height: 900 }]) {
   test(`long labels stay inside the viewBox at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize(size);
+    await page.reload();
     await page.locator('#opt-long').check();
     const overflow = await page.evaluate(() => {
       const bad: string[] = [];
@@ -144,25 +269,36 @@ for (const size of [{ width: 1280, height: 800 }, { width: 600, height: 900 }]) 
   });
 }
 
+test('candidate C mobile dark page at 600x900', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.reload();
+  await page.locator('#theme-c').check();
+  await expect(page.locator('body')).toHaveAttribute('data-pv-page', 'dark');
+  await page.screenshot({ path: 'test-results/screenshots/gallery-c-mobile.png', fullPage: true });
+});
+
 test('keyboard reaches every control with a visible focus outline', async ({ page }) => {
-  const seen: string[] = [];
+  const stops: Array<[string, string]> = [];
   for (let i = 0; i < 10; i++) {
     await page.keyboard.press('Tab');
-    seen.push(await page.evaluate(() => document.activeElement?.id ?? ''));
+    stops.push(await page.evaluate(() => {
+      const el = document.activeElement;
+      return [el?.id ?? '', el ? getComputedStyle(el).outlineStyle : 'none'];
+    }));
   }
   // the theme radio group is one Tab stop landing on the checked member;
-  // its siblings are reached with arrow keys
+  // its siblings are reached with arrow keys; toolbar buttons follow the form
   for (const id of ['theme-a', 'opt-gray', 'opt-motion', 'opt-long']) {
-    expect(seen).toContain(id);
+    expect(stops.map(([id]) => id)).toContain(id);
   }
-  const outline = await page.evaluate(() =>
-    getComputedStyle(document.activeElement!).outlineStyle);
-  expect(outline).not.toBe('none');
+  const axStop = stops.find(([id]) => id === 'opt-gray');
+  expect(axStop?.[1]).not.toBe('none');
 
   await page.locator('#theme-a').focus();
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('#theme-b')).toBeChecked();
-  await expect(page.locator('svg.pv-scene')).toHaveCount(19);
+  await expect(page.locator('svg.pv-scene')).toHaveCount(SVG_COUNT);
 });
 
 test('boundary scene keeps the (8,8) derived tip inside the viewBox', async ({ page }) => {
@@ -171,9 +307,98 @@ test('boundary scene keeps the (8,8) derived tip inside the viewBox', async ({ p
     const poly = g?.querySelector('polygon');
     const svg = g?.closest('svg') as SVGSVGElement | null;
     if (!poly || !svg) return false;
-    const tip = poly.getAttribute('points')!.split(' ')[0].split(',').map(Number);
+    const tip = poly.getAttribute('points')!.split(' ')[0]!.split(',').map(Number);
     const vb = svg.viewBox.baseVal;
     return tip[0]! <= vb.width && tip[0]! >= 0 && tip[1]! <= vb.height && tip[1]! >= 0;
   });
   expect(inside).toBe(true);
+});
+
+// ----- motion layer --------------------------------------------------------
+
+test('entrance animations settle into exactly the static render', async ({ page }) => {
+  const before = await arrowGeo(page);
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll('.cell, .stage-outer')) el.scrollIntoView();
+  });
+  await page.waitForFunction(() => window.__pvDemo.entrances > 0, { timeout: 5000 });
+  await page.waitForFunction(() => document.getAnimations().length === 0, { timeout: 20000 });
+  // geometry untouched, no inline animation styles left behind
+  expect(await arrowGeo(page)).toEqual(before);
+  expect(await page.evaluate(() =>
+    document.querySelectorAll('svg [style]').length)).toBe(0);
+  const opacities = await page.evaluate(() =>
+    [...document.querySelectorAll('.pv-shaft, .pv-head, .pv-dot, .pv-label')]
+      .map((el) => getComputedStyle(el).opacity));
+  for (const o of opacities) expect(o).toBe('1');
+});
+
+test('linkage demo: R = A + B in readout and in the svg', async ({ page }) => {
+  await page.locator('.specimen[data-key="sum"] .stage-outer').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => window.__pvDemo.loops === 1, { timeout: 15000 });
+  await page.waitForFunction(() => window.__pvDemo.frames > 5, { timeout: 10000 });
+  await page.locator('#demo-toggle').click(); // pause
+  const res = await page.evaluate(() => {
+    const text = document.querySelector('.specimen[data-key="sum"] .scene-readout')!.textContent!;
+    const m = /B=\((-?[\d.]+), (-?[\d.]+)\).*R=A\+B=\((-?[\d.]+), (-?[\d.]+)\)/.exec(text);
+    const svg = document.querySelector<SVGSVGElement>('.specimen[data-key="sum"] svg')!;
+    const tip = (id: string) =>
+      svg.querySelector(`[data-item-id="${id}"] polygon`)!
+        .getAttribute('points')!.split(' ')[0]!.split(',').map(Number);
+    const o = svg.querySelector<SVGCircleElement>('[data-item-id="sum-o"] .pv-dot')!;
+    return {
+      readout: m ? m.slice(1).map(Number) : null,
+      a: tip('sum-a'), b: tip('sum-b'), r: tip('sum-r'),
+      ox: o.cx.baseVal.value, oy: o.cy.baseVal.value,
+    };
+  });
+  expect(res.readout).not.toBeNull();
+  const [bx, by, rx, ry] = res.readout!;
+  expect(Math.abs(2 + bx - rx)).toBeLessThan(0.001);
+  expect(Math.abs(1 + by - ry)).toBeLessThan(0.001);
+  // worldToScreen is linear: tipR = tipA + tipB - origin
+  expect(res.r[0]!).toBeCloseTo(res.a[0]! + res.b[0]! - res.ox, 0);
+  expect(res.r[1]!).toBeCloseTo(res.a[1]! + res.b[1]! - res.oy, 0);
+});
+
+test('theme switch while the demo plays keeps exactly one rAF loop', async ({ page }) => {
+  await page.locator('.specimen[data-key="sum"] .stage-outer').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => window.__pvDemo.loops === 1, { timeout: 15000 });
+  const framesBefore = await page.evaluate(() => window.__pvDemo.frames);
+  await page.locator('#theme-c').check();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__pvDemo.loops)).toBe(1);
+  expect(await page.evaluate(() => window.__pvDemo.frames)).toBeGreaterThan(framesBefore);
+  // no leftover WAAPI entrance animations; pv-breathe is the intended
+  // infinite CSS pulse on selected rings under the glow theme
+  const leftovers = await page.evaluate(() =>
+    document.getAnimations()
+      .filter((a) => (a as CSSAnimation).animationName !== 'pv-breathe')
+      .length);
+  expect(leftovers).toBe(0);
+});
+
+test('replaying twice quickly does not stack animations', async ({ page }) => {
+  const cell = page.locator('.specimen[data-key="decomp"] .stage-outer');
+  await cell.scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => window.__pvDemo.entrances > 0, { timeout: 5000 });
+  await page.waitForFunction(() => document.getAnimations().length === 0, { timeout: 20000 });
+  await page.locator('.specimen[data-key="decomp"] .replay').click();
+  await page.waitForTimeout(60);
+  const once = await page.evaluate(() => document.getAnimations().length);
+  await page.locator('.specimen[data-key="decomp"] .replay').click();
+  await page.waitForTimeout(60);
+  const twice = await page.evaluate(() => document.getAnimations().length);
+  expect(once).toBeGreaterThan(0);
+  expect(twice).toBe(once); // second replay cancels the first, not stacks
+});
+
+test('reset returns the demo to the default parameters', async ({ page }) => {
+  await page.locator('.specimen[data-key="sum"] .stage-outer').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => window.__pvDemo.loops === 1, { timeout: 15000 });
+  await page.waitForFunction(() => window.__pvDemo.frames > 5, { timeout: 10000 });
+  await page.locator('#demo-reset').click();
+  await expect(page.locator('.specimen[data-key="sum"] .scene-readout'))
+    .toContainText('B=(0.5, 1.8)');
+  expect(await page.evaluate(() => window.__pvDemo.loops)).toBe(0);
 });

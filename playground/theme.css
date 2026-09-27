@@ -17,8 +17,9 @@
 .pv-gridline { stroke: var(--pv-grid); }
 .pv-axis-line { stroke: var(--pv-axis); }
 .pv-axis-head { fill: var(--pv-axis); }
-.pv-material-flat .pv-head { fill: var(--pv-role); }
+.pv-material-flat .pv-head, .pv-material-glow .pv-head { fill: var(--pv-role); }
 .pv-material-flat .pv-dot { fill: var(--pv-paper); stroke: var(--pv-role); }
+.pv-material-glow .pv-dot { fill: var(--pv-role); }
 .pv-material-soft .pv-dot, .pv-zero { fill: var(--pv-role); }
 .pv-material-flat .pv-zero { fill: var(--pv-role); stroke: none; }
 .pv-halo { fill: var(--pv-role); fill-opacity: 0.18; }
@@ -50,7 +51,10 @@
 
 /* text layers */
 .pv-label { fill: var(--pv-ink); font-size: var(--pv-text-label); }
-.pv-tick { fill: var(--pv-muted); font-size: var(--pv-text-value); }
+.pv-tick {
+  fill: var(--pv-muted); font-size: var(--pv-text-value);
+  font-family: var(--pv-font-numeric); font-variant-numeric: tabular-nums;
+}
 .pv-axis-name {
   fill: var(--pv-muted); font-size: var(--pv-text-value);
   font-family: var(--pv-font-variable); font-style: italic;
@@ -62,10 +66,23 @@
   stroke-width: calc(var(--pv-stroke-main) + 0.75px);
 }
 
+/* glow material (candidate-instrument): breathing selection ring, minor grid */
+.pv-gridline-minor { opacity: 0.45; }
+.pv-ring { transform-box: fill-box; transform-origin: center; }
+[data-pv-theme="candidate-instrument"] .pv-state-selected .pv-ring {
+  animation: pv-breathe 2.4s ease-in-out infinite;
+}
+@keyframes pv-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
 /* reduced motion: the checkbox adds .pv-reduced-motion; the OS setting matches too */
-.pv-reduced-motion .pv-handle-dot, .pv-reduced-motion .pv-ring { transition-duration: 0s; }
+.pv-reduced-motion .pv-handle-dot, .pv-reduced-motion .pv-ring {
+  transition-duration: 0s; animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
-  .pv-handle-dot, .pv-ring { transition-duration: 0s; }
+  .pv-handle-dot, .pv-ring { transition-duration: 0s; animation: none; }
 }
 
 .pv-grayscale { filter: grayscale(1); }

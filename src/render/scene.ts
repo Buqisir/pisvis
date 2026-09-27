@@ -108,8 +108,16 @@ interface Ctx {
   readonly view: Viewport;
   readonly theme: ThemeDefinition;
   readonly soft: boolean;
+  readonly glow: boolean;
   readonly linecap: 'round' | 'butt';
   readonly linejoin: 'round' | 'miter';
+}
+
+// Glow applies to luminous geometry only — never to labels, ticks or axes.
+const GLOW_ROLES = new Set(['input', 'derived', 'component']);
+function glowWrap(ctx: Ctx, role: SceneRole, inner: string): string {
+  if (!ctx.glow || !GLOW_ROLES.has(role)) return inner;
+  return `<g class="pv-glow" filter="url(#${ctx.iid}-glow)">${inner}</g>`;
 }
 
 function stateClass(state: SceneState): string {
@@ -184,9 +192,10 @@ function labelClearance(theme: ThemeDefinition, hasHandle: boolean): number {
 
 function handleGroup(ctx: Ctx, p: Vec2, state: SceneState): string {
   const { point } = ctx.theme;
+  const glow = ctx.glow ? ` filter="url(#${ctx.iid}-glow)"` : '';
   const parts = [
     `<circle class="pv-hit" cx="${p.x}" cy="${p.y}" r="${point.hitRadius}" fill="transparent" pointer-events="all"/>`,
-    `<circle class="pv-handle-dot" cx="${p.x}" cy="${p.y}" r="${point.handleRadius}"/>`,
+    `<circle class="pv-handle-dot" cx="${p.x}" cy="${p.y}" r="${point.handleRadius}"${glow}/>`,
   ];
   if (state === 'selected' || state === 'dragging' || state === 'focus') {
     parts.push(`<circle class="pv-ring" cx="${p.x}" cy="${p.y}" r="${point.handleRadius + 4}"/>`);
@@ -212,19 +221,20 @@ function renderArrow(ctx: Ctx, item: Extract<SceneItem, { kind: 'arrow' }>): str
   const clearance = labelClearance(theme, hasHandle);
   const dash = item.dashed ? ` stroke-dasharray="${dashFor(role, theme)}"` : '';
   const grad = ctx.soft ? ` fill="url(#${ctx.iid}-grad-${role})"` : '';
-  const parts: string[] = [];
+  const geom: string[] = [];
   if (shape.kind === 'zero') {
-    parts.push(`<circle class="pv-zero" cx="${shape.point.x}" cy="${shape.point.y}" r="${theme.point.radius}"/>`);
+    geom.push(`<circle class="pv-zero" cx="${shape.point.x}" cy="${shape.point.y}" r="${theme.point.radius}"/>`);
   } else {
     const shaft = `<line class="pv-shaft" x1="${shape.start.x}" y1="${shape.start.y}" x2="${shape.base.x}" y2="${shape.base.y}" stroke-width="${theme.stroke.main}"${dash} stroke-linecap="${ctx.linecap}"/>`;
     if (state === 'error') {
-      parts.push(errorUnderlay(
+      geom.push(errorUnderlay(
         `<line x1="${shape.start.x}" y1="${shape.start.y}" x2="${shape.base.x}" y2="${shape.base.y}" stroke-width="${theme.stroke.main + 2.5}" stroke-dasharray="2 3" stroke-linecap="butt"/>`,
       ));
     }
-    parts.push(shaft);
-    parts.push(`<polygon class="pv-head" points="${shape.tip.x},${shape.tip.y} ${shape.left.x},${shape.left.y} ${shape.right.x},${shape.right.y}"${grad} stroke-linejoin="${ctx.linejoin}"/>`);
+    geom.push(shaft);
+    geom.push(`<polygon class="pv-head" points="${shape.tip.x},${shape.tip.y} ${shape.left.x},${shape.left.y} ${shape.right.x},${shape.right.y}"${grad} stroke-linejoin="${ctx.linejoin}"/>`);
   }
+  const parts: string[] = [glowWrap(ctx, role, geom.join(''))];
   if (label !== undefined) {
     const anchorPx = label.anchor === 'start' ? s
       : label.anchor === 'end' ? e
@@ -244,16 +254,21 @@ function renderPoint(ctx: Ctx, item: Extract<SceneItem, { kind: 'point' }>): str
   const state = checkState(item.state);
   const label = checkLabel(item.label);
   const p = worldToScreen(item.at, view);
-  const parts: string[] = [];
+  const geom: string[] = [];
   if (ctx.soft) {
-    parts.push(`<circle class="pv-halo" cx="${p.x}" cy="${p.y}" r="${theme.point.radius * 2.2}"/>`);
+    geom.push(`<circle class="pv-halo" cx="${p.x}" cy="${p.y}" r="${theme.point.radius * 2.2}"/>`);
   }
   if (state === 'error') {
-    parts.push(errorUnderlay(
+    geom.push(errorUnderlay(
       `<circle cx="${p.x}" cy="${p.y}" r="${theme.point.radius + 2.5}" stroke-width="${theme.stroke.aux}" stroke-dasharray="2 3" fill="none"/>`,
     ));
   }
-  parts.push(`<circle class="pv-dot" cx="${p.x}" cy="${p.y}" r="${theme.point.radius}" stroke-width="${theme.stroke.aux}"/>`);
+  geom.push(`<circle class="pv-dot" cx="${p.x}" cy="${p.y}" r="${theme.point.radius}" stroke-width="${theme.stroke.aux}"/>`);
+  const parts: string[] = [
+    ctx.glow
+      ? `<g class="pv-glow" filter="url(#${ctx.iid}-glow)">${geom.join('')}</g>`
+      : geom.join(''),
+  ];
   if (state === 'focus') {
     parts.push(`<circle class="pv-ring" cx="${p.x}" cy="${p.y}" r="${theme.point.handleRadius + 4}"/>`);
   }
@@ -299,6 +314,23 @@ function renderAxes(ctx: Ctx, item: Extract<SceneItem, { kind: 'axes' }>): strin
       const a = worldToScreen(vec2(xMin, t), view);
       const b = worldToScreen(vec2(xMax, t), view);
       gridParts.push(`<line class="pv-gridline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
+    }
+    if (ctx.glow) {
+      const half = item.tick / 2;
+      for (let i = Math.ceil(xMin / half); i * half <= xMax + 1e-9; i++) {
+        if (i % 2 === 0) continue; // multiples of tick are the major lines above
+        const t = i * half;
+        const a = worldToScreen(vec2(t, yMin), view);
+        const b = worldToScreen(vec2(t, yMax), view);
+        gridParts.push(`<line class="pv-gridline pv-gridline-minor" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
+      }
+      for (let i = Math.ceil(yMin / half); i * half <= yMax + 1e-9; i++) {
+        if (i % 2 === 0) continue;
+        const t = i * half;
+        const a = worldToScreen(vec2(xMin, t), view);
+        const b = worldToScreen(vec2(xMax, t), view);
+        gridParts.push(`<line class="pv-gridline pv-gridline-minor" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
+      }
     }
     parts.push(`<g class="pv-grid">${gridParts.join('')}</g>`);
   }
@@ -369,8 +401,9 @@ export function renderSceneSvg(options: SceneSvgOptions): string {
   const ctx: Ctx = {
     iid, view: options.viewport, theme,
     soft: theme.material === 'soft',
-    linecap: theme.material === 'soft' ? 'round' : 'butt',
-    linejoin: theme.material === 'soft' ? 'round' : 'miter',
+    glow: theme.material === 'glow',
+    linecap: theme.material === 'flat' ? 'butt' : 'round',
+    linejoin: theme.material === 'flat' ? 'miter' : 'round',
   };
 
   const defs: string[] = [];
@@ -382,6 +415,11 @@ export function renderSceneSvg(options: SceneSvgOptions): string {
     }
     defs.push(`<pattern id="${iid}-dots" width="16" height="16" patternUnits="userSpaceOnUse">` +
       `<circle class="pv-paper-dot" cx="3" cy="3" r="1.1"/></pattern>`);
+  }
+  if (ctx.glow) {
+    defs.push(`<filter id="${iid}-glow" x="-50%" y="-50%" width="200%" height="200%">` +
+      `<feGaussianBlur stdDeviation="2.2" result="pv-glow-blur"/>` +
+      `<feMerge><feMergeNode in="pv-glow-blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`);
   }
 
   const parts: string[] = [

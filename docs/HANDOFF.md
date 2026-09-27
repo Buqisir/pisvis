@@ -158,3 +158,30 @@ macOS 本机；Node 24.15.0 / npm 11.12.1；TypeScript 6.0.3、Vite 8.3.0、@pla
 - 长标签以固定锚点+人工偏移适配，无自动避让；CI（无中文字体包）可能与本机字形不同。
 - tick 数字仅在 B（线描）显示；A 隐藏刻度文字。灰度只是检查开关，非打印管线。
 - 主题切换几何不变的前提是两主题共用同一适配 margin（取两主题 safeMargin 最大值 36px）。
+
+### E.2 候选 C 与动效
+
+2026-09-28（UTC+08）追加：维护者看过 A/B 后要求更“科技感”的方向——深色仪器感候选 C
+（material: 'glow'）与纯 CSS/WAAPI 动效层，无新增依赖。
+
+- 主题数据：`ThemeDefinition.text` 新增 `numericFamily`（三套主题同栈，等宽数字用于刻度与读数）；
+  `material` 扩为 `'soft' | 'flat' | 'glow'`。C 的 input 由 oklch(84% 0.13 200) 调至 oklch(86% 0.13 200)
+  ——原值与 component 明度差仅 0.07（要求 ≥0.08），调后 0.09，对比度 13.06:1，srgb 仍在色域内。
+- 序列化：glow 主题输出命名空间隔离的 `feGaussianBlur` 滤镜（input/derived/component 箭头、点、手柄点）；
+  grid 时额外输出半格细线（pv-gridline-minor）；soft/flat 输出不变。C 选中环有 2.4s 呼吸脉冲
+  （pv-breathe），减少动效（媒体查询或 .pv-reduced-motion）下关闭。
+- 动效层在 `playground/motion.ts` + `gallery.ts`，演示层专用：IntersectionObserver 每个格子入场一次
+  （标记后跨重渲染不重播；「重播」按钮先取消场内动画再重放，不叠加）；场景一「联动演示」用 rAF 让
+  B 沿圆周漂移（~6s 周期），逐帧经同一渲染管线重画并更新读数；暂停/复位/主题切换/可见性隐藏都
+  干净停环。减少动效时无入场、演示不自动开始且按钮禁用。窗口上暴露 `__pvDemo` 计数用于测试。
+- 单选 C 时整页转暗（`body[data-pv-page="dark"]`，读数变为半透明仪表板）；并排对比为三主题，
+  宽屏 ≥1500px 三列、≥1100px 两列、以下纵向堆叠。
+- 验证：`npm run check` 61 通过；`npm run test:browser` 43 通过（M1 19 + gallery 24，含入口动画
+  终态=静态渲染、双主题重叠断言扩至 C、联动 R=A+B 读数与 SVG 一致性、播放中切主题恰好一条 rAF
+  循环、快速两次重播不叠加）。截图含 gallery-c.png、gallery-c-mobile.png（暗色整页）。
+- demo-dist 体积：gallery 页约 26.8kB（js 24.2kB + css 2.5kB + html 2.1kB），较 E 节时 +5.3kB。
+- 复审修正：非 soft 材质补上 pv-head/pv-dot 角色填充（C 的箭头曾默认黑色）；单主题模式
+  stage-pair 固定单列（多列网格仅 :has 多个变体时启用），stage 最大 880px；单元格/面板网格
+  最小宽调整为不缩小 svg（刻度有效字号 ≥12.5px，浏览器断言三套主题验证）。
+- 已知限制：仍仅 Chromium；C 的辉光在投影/打印下未验证（投影与打印请用浅色主题）；动效与呼吸
+  脉冲未在 Firefox/WebKit 实测；visibilitychange 恢复路径由代码实现但浏览器测试未覆盖真隐藏。

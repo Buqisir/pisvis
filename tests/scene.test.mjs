@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK, renderSceneSvg, vec2,
+  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK, CANDIDATE_INSTRUMENT,
+  CANDIDATE_THEMES, renderSceneSvg, vec2,
 } from '../dist/index.js';
 
 const view = { originPx: vec2(200, 150), pixelsPerUnit: 40 };
@@ -96,7 +97,32 @@ test('switching themes changes no geometry, only styling', () => {
     }
     return out;
   };
-  assert.deepEqual(geo(base('t', CANDIDATE_ILLUSTRATED, items)), geo(base('t', CANDIDATE_LINEWORK, items)));
+  for (const theme of CANDIDATE_THEMES) {
+    assert.deepEqual(
+      geo(base('t', CANDIDATE_ILLUSTRATED, items)), geo(base('t', theme, items)),
+      `geometry differs under ${theme.id}`,
+    );
+  }
+});
+
+test('glow material emits a namespaced filter; other materials do not', () => {
+  const glow = base('g', CANDIDATE_INSTRUMENT);
+  assert.match(glow, /id="g-glow"/);
+  assert.match(glow, /filter="url\(#g-glow\)"/);
+  for (const theme of [CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK]) {
+    const svg = base('g', theme);
+    assert.ok(!svg.includes('pv-glow'), `${theme.id} must not emit glow markup`);
+  }
+});
+
+test('glow theme adds minor grid lines at half tick; A/B unchanged', () => {
+  const glow = base('g', CANDIDATE_INSTRUMENT);
+  const majors = glow.match(/class="pv-gridline"/g)?.length ?? 0;
+  const minors = glow.match(/pv-gridline-minor/g)?.length ?? 0;
+  assert.ok(majors > 0 && minors > 0, 'both major and minor grid lines');
+  for (const theme of [CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK]) {
+    assert.ok(!base('g', theme).includes('pv-gridline-minor'), `${theme.id} grid unchanged`);
+  }
 });
 
 test('readonly items never get handles; handles carry state rings', () => {
