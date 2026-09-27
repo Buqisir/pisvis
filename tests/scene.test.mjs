@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK, CANDIDATE_INSTRUMENT,
+  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK,
   CANDIDATE_THEMES, renderSceneSvg, vec2,
 } from '../dist/index.js';
 
@@ -105,23 +105,24 @@ test('switching themes changes no geometry, only styling', () => {
   }
 });
 
-test('glow material emits a namespaced filter; other materials do not', () => {
-  const glow = base('g', CANDIDATE_INSTRUMENT);
-  assert.match(glow, /id="g-glow"/);
-  assert.match(glow, /filter="url\(#g-glow\)"/);
-  for (const theme of [CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK]) {
-    const svg = base('g', theme);
-    assert.ok(!svg.includes('pv-glow'), `${theme.id} must not emit glow markup`);
-  }
+test('variable labels get pv-label-var; bad style throws', () => {
+  const svg = base('demo', CANDIDATE_ILLUSTRATED, [
+    { kind: 'arrow', id: 'a', role: 'input', from: vec2(0, 0), to: vec2(1, 0), label: { text: 'A', anchor: 'end', style: 'variable' } },
+    { kind: 'arrow', id: 'b', role: 'input', from: vec2(0, -0.5), to: vec2(1, -0.5), label: { text: '说明', anchor: 'mid' } },
+  ]);
+  assert.match(svg, /class="pv-label pv-label-var"[^>]*>A</);
+  assert.match(svg, /class="pv-label"[^>]*>说明</);
+  assert.throws(() => base('demo', CANDIDATE_ILLUSTRATED, [
+    { kind: 'arrow', id: 'a', role: 'input', from: vec2(0, 0), to: vec2(1, 0), label: { text: 'A', anchor: 'end', style: 'bogus' } },
+  ]), RangeError);
 });
 
-test('glow theme adds minor grid lines at half tick; A/B unchanged', () => {
-  const glow = base('g', CANDIDATE_INSTRUMENT);
-  const majors = glow.match(/class="pv-gridline"/g)?.length ?? 0;
-  const minors = glow.match(/pv-gridline-minor/g)?.length ?? 0;
-  assert.ok(majors > 0 && minors > 0, 'both major and minor grid lines');
-  for (const theme of [CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK]) {
-    assert.ok(!base('g', theme).includes('pv-gridline-minor'), `${theme.id} grid unchanged`);
+test('no defs/gradients/filters/patterns are emitted (materials are flat paint)', () => {
+  for (const theme of CANDIDATE_THEMES) {
+    const svg = base('g', theme);
+    assert.ok(!svg.includes('<defs'), `${theme.id} emits no defs`);
+    assert.ok(!svg.includes('url(#'), `${theme.id} emits no url(#) refs`);
+    assert.ok(!svg.includes('pv-grad-') && !svg.includes('pv-glow') && !svg.includes('pv-texture'));
   }
 });
 

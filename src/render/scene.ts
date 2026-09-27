@@ -17,6 +17,8 @@ export interface SceneLabel {
   readonly anchor: 'start' | 'mid' | 'end';
   /** Manual SVG-px offset applied after the theme's labelOffset. */
   readonly offsetPx?: Vec2;
+  /** 'variable' renders in italic serif (single math symbols); default 'text'. */
+  readonly style?: 'variable' | 'text';
 }
 
 export type SceneItem =
@@ -70,6 +72,7 @@ const ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 const ROLES = new Set(['input', 'derived', 'component', 'guide']);
 const STATES = new Set(['default', 'selected', 'dragging', 'readonly', 'error', 'focus']);
 const ANCHORS = new Set(['start', 'mid', 'end']);
+const LABEL_STYLES = new Set(['variable', 'text']);
 const MAX_LABEL_CHARS = 200;
 
 function checkId(id: string, what: string): string {
@@ -95,6 +98,9 @@ function checkLabel(label: SceneLabel | undefined): SceneLabel | undefined {
     throw new RangeError(`label text must be a string of at most ${MAX_LABEL_CHARS} chars`);
   }
   if (!ANCHORS.has(label.anchor)) throw new RangeError(`unknown label anchor: ${String(label.anchor)}`);
+  if (label.style !== undefined && !LABEL_STYLES.has(label.style)) {
+    throw new RangeError(`unknown label style: ${String(label.style)}`);
+  }
   if (label.offsetPx !== undefined) vec2(label.offsetPx.x, label.offsetPx.y);
   return label;
 }
@@ -108,16 +114,8 @@ interface Ctx {
   readonly view: Viewport;
   readonly theme: ThemeDefinition;
   readonly soft: boolean;
-  readonly glow: boolean;
   readonly linecap: 'round' | 'butt';
   readonly linejoin: 'round' | 'miter';
-}
-
-// Glow applies to luminous geometry only — never to labels, ticks or axes.
-const GLOW_ROLES = new Set(['input', 'derived', 'component']);
-function glowWrap(ctx: Ctx, role: SceneRole, inner: string): string {
-  if (!ctx.glow || !GLOW_ROLES.has(role)) return inner;
-  return `<g class="pv-glow" filter="url(#${ctx.iid}-glow)">${inner}</g>`;
 }
 
 function stateClass(state: SceneState): string {
@@ -178,7 +176,8 @@ function labelTag(
   }
   x += manual.x;
   y += manual.y;
-  return `<text class="pv-label" x="${x}" y="${y}" text-anchor="${textAnchor}"${baseline}>${xml(label.text)}</text>`;
+  const varCls = label.style === 'variable' ? ' pv-label-var' : '';
+  return `<text class="pv-label${varCls}" x="${x}" y="${y}" text-anchor="${textAnchor}"${baseline}>${xml(label.text)}</text>`;
 }
 
 // Handle items need the label past the visible ring, not just labelOffset.
@@ -192,11 +191,14 @@ function labelClearance(theme: ThemeDefinition, hasHandle: boolean): number {
 
 function handleGroup(ctx: Ctx, p: Vec2, state: SceneState): string {
   const { point } = ctx.theme;
-  const glow = ctx.glow ? ` filter="url(#${ctx.iid}-glow)"` : '';
   const parts = [
     `<circle class="pv-hit" cx="${p.x}" cy="${p.y}" r="${point.hitRadius}" fill="transparent" pointer-events="all"/>`,
-    `<circle class="pv-handle-dot" cx="${p.x}" cy="${p.y}" r="${point.handleRadius}"${glow}/>`,
   ];
+  // 'soft' gets a whisper of halo behind the handle dot — the only halo left
+  if (ctx.soft) {
+    parts.push(`<circle class="pv-halo" cx="${p.x}" cy="${p.y}" r="${point.handleRadius + 5}"/>`);
+  }
+  parts.push(`<circle class="pv-handle-dot" cx="${p.x}" cy="${p.y}" r="${point.handleRadius}"/>`);
   if (state === 'selected' || state === 'dragging' || state === 'focus') {
     parts.push(`<circle class="pv-ring" cx="${p.x}" cy="${p.y}" r="${point.handleRadius + 4}"/>`);
   }
@@ -220,7 +222,6 @@ function renderArrow(ctx: Ctx, item: Extract<SceneItem, { kind: 'arrow' }>): str
   const hasHandle = item.handle === true && state !== 'readonly';
   const clearance = labelClearance(theme, hasHandle);
   const dash = item.dashed ? ` stroke-dasharray="${dashFor(role, theme)}"` : '';
-  const grad = ctx.soft ? ` fill="url(#${ctx.iid}-grad-${role})"` : '';
   const geom: string[] = [];
   if (shape.kind === 'zero') {
     geom.push(`<circle class="pv-zero" cx="${shape.point.x}" cy="${shape.point.y}" r="${theme.point.radius}"/>`);
@@ -232,9 +233,9 @@ function renderArrow(ctx: Ctx, item: Extract<SceneItem, { kind: 'arrow' }>): str
       ));
     }
     geom.push(shaft);
-    geom.push(`<polygon class="pv-head" points="${shape.tip.x},${shape.tip.y} ${shape.left.x},${shape.left.y} ${shape.right.x},${shape.right.y}"${grad} stroke-linejoin="${ctx.linejoin}"/>`);
+    geom.push(`<polygon class="pv-head" points="${shape.tip.x},${shape.tip.y} ${shape.left.x},${shape.left.y} ${shape.right.x},${shape.right.y}" stroke-linejoin="${ctx.linejoin}"/>`);
   }
-  const parts: string[] = [glowWrap(ctx, role, geom.join(''))];
+  const parts: string[] = [geom.join('')];
   if (label !== undefined) {
     const anchorPx = label.anchor === 'start' ? s
       : label.anchor === 'end' ? e
@@ -254,21 +255,13 @@ function renderPoint(ctx: Ctx, item: Extract<SceneItem, { kind: 'point' }>): str
   const state = checkState(item.state);
   const label = checkLabel(item.label);
   const p = worldToScreen(item.at, view);
-  const geom: string[] = [];
-  if (ctx.soft) {
-    geom.push(`<circle class="pv-halo" cx="${p.x}" cy="${p.y}" r="${theme.point.radius * 2.2}"/>`);
-  }
+  const parts: string[] = [];
   if (state === 'error') {
-    geom.push(errorUnderlay(
+    parts.push(errorUnderlay(
       `<circle cx="${p.x}" cy="${p.y}" r="${theme.point.radius + 2.5}" stroke-width="${theme.stroke.aux}" stroke-dasharray="2 3" fill="none"/>`,
     ));
   }
-  geom.push(`<circle class="pv-dot" cx="${p.x}" cy="${p.y}" r="${theme.point.radius}" stroke-width="${theme.stroke.aux}"/>`);
-  const parts: string[] = [
-    ctx.glow
-      ? `<g class="pv-glow" filter="url(#${ctx.iid}-glow)">${geom.join('')}</g>`
-      : geom.join(''),
-  ];
+  parts.push(`<circle class="pv-dot" cx="${p.x}" cy="${p.y}" r="${theme.point.radius}" stroke-width="${theme.stroke.aux}"/>`);
   if (state === 'focus') {
     parts.push(`<circle class="pv-ring" cx="${p.x}" cy="${p.y}" r="${theme.point.handleRadius + 4}"/>`);
   }
@@ -314,23 +307,6 @@ function renderAxes(ctx: Ctx, item: Extract<SceneItem, { kind: 'axes' }>): strin
       const a = worldToScreen(vec2(xMin, t), view);
       const b = worldToScreen(vec2(xMax, t), view);
       gridParts.push(`<line class="pv-gridline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
-    }
-    if (ctx.glow) {
-      const half = item.tick / 2;
-      for (let i = Math.ceil(xMin / half); i * half <= xMax + 1e-9; i++) {
-        if (i % 2 === 0) continue; // multiples of tick are the major lines above
-        const t = i * half;
-        const a = worldToScreen(vec2(t, yMin), view);
-        const b = worldToScreen(vec2(t, yMax), view);
-        gridParts.push(`<line class="pv-gridline pv-gridline-minor" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
-      }
-      for (let i = Math.ceil(yMin / half); i * half <= yMax + 1e-9; i++) {
-        if (i % 2 === 0) continue;
-        const t = i * half;
-        const a = worldToScreen(vec2(xMin, t), view);
-        const b = worldToScreen(vec2(xMax, t), view);
-        gridParts.push(`<line class="pv-gridline pv-gridline-minor" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
-      }
     }
     parts.push(`<g class="pv-grid">${gridParts.join('')}</g>`);
   }
@@ -401,33 +377,13 @@ export function renderSceneSvg(options: SceneSvgOptions): string {
   const ctx: Ctx = {
     iid, view: options.viewport, theme,
     soft: theme.material === 'soft',
-    glow: theme.material === 'glow',
     linecap: theme.material === 'flat' ? 'butt' : 'round',
     linejoin: theme.material === 'flat' ? 'miter' : 'round',
   };
 
-  const defs: string[] = [];
-  if (ctx.soft) {
-    for (const role of ROLES) {
-      defs.push(`<linearGradient id="${iid}-grad-${role}" x1="0" y1="0" x2="0" y2="1">` +
-        `<stop offset="0" class="pv-grad-top pv-role-${role}"/>` +
-        `<stop offset="1" class="pv-grad-bot pv-role-${role}"/></linearGradient>`);
-    }
-    defs.push(`<pattern id="${iid}-dots" width="16" height="16" patternUnits="userSpaceOnUse">` +
-      `<circle class="pv-paper-dot" cx="3" cy="3" r="1.1"/></pattern>`);
-  }
-  if (ctx.glow) {
-    defs.push(`<filter id="${iid}-glow" x="-50%" y="-50%" width="200%" height="200%">` +
-      `<feGaussianBlur stdDeviation="2.2" result="pv-glow-blur"/>` +
-      `<feMerge><feMergeNode in="pv-glow-blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`);
-  }
-
   const parts: string[] = [
     `<rect class="pv-paper" width="${options.widthPx}" height="${options.heightPx}"/>`,
   ];
-  if (ctx.soft) {
-    parts.push(`<rect class="pv-texture" width="${options.widthPx}" height="${options.heightPx}" fill="url(#${iid}-dots)"/>`);
-  }
   for (const item of options.items) {
     switch (item.kind) {
       case 'axes': parts.push(renderAxes(ctx, item)); break;
@@ -441,5 +397,5 @@ export function renderSceneSvg(options: SceneSvgOptions): string {
     `viewBox="0 0 ${options.widthPx} ${options.heightPx}" role="img" aria-labelledby="${iid}-title" ` +
     `class="pv-scene pv-material-${theme.material}">` +
     `<title id="${iid}-title">${title}</title>` +
-    `<defs>${defs.join('')}</defs>${parts.join('')}</svg>`;
+    `${parts.join('')}</svg>`;
 }

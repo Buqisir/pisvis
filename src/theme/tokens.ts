@@ -43,7 +43,7 @@ export interface ThemeDefinition {
     readonly caption: number;
   };
   readonly space: { readonly labelOffset: number; readonly safeMargin: number };
-  readonly material: 'soft' | 'flat' | 'glow';
+  readonly material: 'soft' | 'flat';
   readonly motion: { readonly emphasisMs: number; readonly easing: string };
 }
 
@@ -57,7 +57,7 @@ const EASING_PATTERN = new RegExp(
   'cubic-bezier\\(-?\\d*\\.?\\d+,\\s*-?\\d*\\.?\\d+,\\s*-?\\d*\\.?\\d+,\\s*-?\\d*\\.?\\d+\\)|' +
   'steps\\(\\d+(,\\s*(jump-start|jump-end|jump-none|jump-both|start|end))?\\))$',
 );
-const MATERIALS = new Set(['soft', 'flat', 'glow']);
+const MATERIALS = new Set(['soft', 'flat']);
 
 function checkNumber(value: number, name: string, min: number): void {
   finite(value, name);

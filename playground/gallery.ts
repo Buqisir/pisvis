@@ -1,5 +1,5 @@
 import {
-  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK, CANDIDATE_INSTRUMENT, CANDIDATE_THEMES,
+  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK, CANDIDATE_THEMES,
   add, fitViewport, magnitude, renderSceneSvg, themeToCssText, vec2,
 } from '../src/index.js';
 import type { SceneItem, ThemeDefinition, Vec2, Viewport } from '../src/index.js';
@@ -55,14 +55,14 @@ const sumItems = (long: boolean, b: Vec2): SceneItem[] => {
   const r = add(A, b);
   return [
     { kind: 'axes', id: 'ax', x: [-1, 3.5], y: [-1, 3.5], tick: 1, grid: true },
-    { kind: 'arrow', id: 'sum-a', role: 'input', from: ZERO, to: A, handle: true, state: 'selected', label: { text: long ? '分向量 A（输入，可编辑）' : 'A', anchor: 'end' } },
-    { kind: 'arrow', id: 'sum-b', role: 'input', from: ZERO, to: b, handle: true, label: { text: 'B', anchor: 'end' } },
-    { kind: 'arrow', id: 'sum-bt', role: 'guide', from: A, to: r, dashed: true, label: { text: long ? 'B 的平移（平行四边形法则）' : 'B′', anchor: 'mid' } },
+    { kind: 'arrow', id: 'sum-a', role: 'input', from: ZERO, to: A, handle: true, state: 'selected', label: { text: long ? '分向量 A（输入，可编辑）' : 'A', anchor: 'end', style: long ? 'text' : 'variable' } },
+    { kind: 'arrow', id: 'sum-b', role: 'input', from: ZERO, to: b, handle: true, label: { text: 'B', anchor: 'end', style: 'variable' } },
+    { kind: 'arrow', id: 'sum-bt', role: 'guide', from: A, to: r, dashed: true, label: { text: long ? 'B 的平移（平行四边形法则）' : 'B′', anchor: 'mid', style: long ? 'text' : 'variable' } },
     { kind: 'segment', id: 'sum-para', role: 'guide', from: b, to: r, dashed: true },
     { kind: 'arrow', id: 'sum-r', role: 'derived', from: ZERO, to: r, state: 'readonly', label: long
       ? { text: '合向量 R（由平行四边形法则得到，无量纲）', anchor: 'mid', offsetPx: vec2(0, 30) }
-      : { text: 'R', anchor: 'end' } },
-    { kind: 'point', id: 'sum-o', role: 'component', at: ZERO, label: { text: 'O', anchor: 'start', offsetPx: vec2(0, 16) } },
+      : { text: 'R', anchor: 'end', style: 'variable' } },
+    { kind: 'point', id: 'sum-o', role: 'component', at: ZERO, label: { text: 'O', anchor: 'start', offsetPx: vec2(0, 16), style: 'variable' } },
   ];
 };
 const sumReadout = (b: Vec2): string => {
@@ -121,7 +121,7 @@ const SCENES: SectionDef[] = [
         stages: [['axes'], ['axes-v']],
       },
     ],
-    readout: '四种角色、六种状态、坐标轴各自独立呈现；同一套几何，三种主题。',
+    readout: '四种角色、六种状态、坐标轴各自独立呈现；同一套几何，两种主题。',
   },
   {
     key: 'sum',
@@ -149,12 +149,12 @@ const SCENES: SectionDef[] = [
       points: [vec2(-1, -1), vec2(3.5, 2.5)],
       items: (long) => [
         { kind: 'axes', id: 'ax', x: [-1, 3.5], y: [-1, 2.5], tick: 1, grid: true },
-        { kind: 'arrow', id: 'dec-v', role: 'input', from: ZERO, to: V, handle: true, label: { text: 'V', anchor: 'end' } },
-        { kind: 'arrow', id: 'dec-vx', role: 'component', from: ZERO, to: vec2(V.x, 0), dashed: true, label: { text: long ? '水平分量 Vx（只读派生）' : 'Vx', anchor: 'mid', offsetPx: vec2(0, 20) } },
-        { kind: 'arrow', id: 'dec-vy', role: 'component', from: ZERO, to: vec2(0, V.y), dashed: true, label: { text: 'Vy', anchor: 'mid', offsetPx: vec2(0, 26) } },
+        { kind: 'arrow', id: 'dec-v', role: 'input', from: ZERO, to: V, handle: true, label: { text: 'V', anchor: 'end', style: 'variable' } },
+        { kind: 'arrow', id: 'dec-vx', role: 'component', from: ZERO, to: vec2(V.x, 0), dashed: true, label: { text: long ? '水平分量 Vx（只读派生）' : 'Vx', anchor: 'mid', offsetPx: vec2(0, 20), style: long ? 'text' : 'variable' } },
+        { kind: 'arrow', id: 'dec-vy', role: 'component', from: ZERO, to: vec2(0, V.y), dashed: true, label: { text: 'Vy', anchor: 'mid', offsetPx: vec2(0, 26), style: 'variable' } },
         { kind: 'segment', id: 'dec-gx', role: 'guide', from: V, to: vec2(V.x, 0), dashed: true },
         { kind: 'segment', id: 'dec-gy', role: 'guide', from: V, to: vec2(0, V.y), dashed: true },
-        { kind: 'point', id: 'dec-o', role: 'component', at: ZERO, label: { text: 'O', anchor: 'start', offsetPx: vec2(0, 16) } },
+        { kind: 'point', id: 'dec-o', role: 'component', at: ZERO, label: { text: 'O', anchor: 'start', offsetPx: vec2(0, 16), style: 'variable' } },
       ],
       stages: [['ax'], ['dec-v'], ['dec-gx', 'dec-gy'], ['dec-vx', 'dec-vy']],
     }],
@@ -179,9 +179,9 @@ const SCENES: SectionDef[] = [
         points: [vec2(-2.5, -1.5), vec2(2.5, 1.5)],
         items: () => [
           { kind: 'axes', id: 'ax', x: [-2.5, 2.5], y: [-1.5, 1.5], tick: 1, grid: true },
-          { kind: 'arrow', id: 'a', role: 'input', from: ZERO, to: vec2(1.5, 0.5), label: { text: 'A', anchor: 'end' } },
-          { kind: 'arrow', id: 'b', role: 'input', from: ZERO, to: vec2(-1.5, -0.5), label: { text: 'B', anchor: 'end', offsetPx: vec2(-4, 10) } },
-          { kind: 'arrow', id: 'r0', role: 'derived', from: ZERO, to: ZERO, state: 'readonly', label: { text: 'R=0', anchor: 'mid', offsetPx: vec2(-6, -4) } },
+          { kind: 'arrow', id: 'a', role: 'input', from: ZERO, to: vec2(1.5, 0.5), label: { text: 'A', anchor: 'end', style: 'variable' } },
+          { kind: 'arrow', id: 'b', role: 'input', from: ZERO, to: vec2(-1.5, -0.5), label: { text: 'B', anchor: 'end', offsetPx: vec2(-4, 10), style: 'variable' } },
+          { kind: 'arrow', id: 'r0', role: 'derived', from: ZERO, to: ZERO, state: 'readonly', label: { text: 'R=0', anchor: 'mid', offsetPx: vec2(-6, -4), style: 'variable' } },
         ],
       },
       {
@@ -189,7 +189,7 @@ const SCENES: SectionDef[] = [
         points: [vec2(-0.4, -0.3), vec2(0.4, 0.3)],
         items: () => [
           { kind: 'axes', id: 'ax', x: [-0.4, 0.4], y: [-0.3, 0.3], tick: 0.2, grid: true },
-          { kind: 'arrow', id: 's', role: 'input', from: ZERO, to: vec2(0.05, 0.02), label: { text: 'v', anchor: 'end' } },
+          { kind: 'arrow', id: 's', role: 'input', from: ZERO, to: vec2(0.05, 0.02), label: { text: 'v', anchor: 'end', style: 'variable' } },
         ],
       },
       {
@@ -197,9 +197,9 @@ const SCENES: SectionDef[] = [
         points: [vec2(-1, -1), vec2(9, 9)],
         items: () => [
           { kind: 'axes', id: 'ax', x: [-1, 9], y: [-1, 9], tick: 2, grid: true },
-          { kind: 'arrow', id: 'a8', role: 'input', from: ZERO, to: vec2(4, 4), label: { text: 'A', anchor: 'mid' } },
-          { kind: 'arrow', id: 'b8', role: 'guide', from: vec2(4, 4), to: vec2(8, 8), dashed: true, label: { text: 'B', anchor: 'mid' } },
-          { kind: 'arrow', id: 'e-r8', role: 'derived', from: ZERO, to: vec2(8, 8), state: 'readonly', label: { text: 'R', anchor: 'mid', offsetPx: vec2(12, 10) } },
+          { kind: 'arrow', id: 'a8', role: 'input', from: ZERO, to: vec2(4, 4), label: { text: 'A', anchor: 'mid', style: 'variable' } },
+          { kind: 'arrow', id: 'b8', role: 'guide', from: vec2(4, 4), to: vec2(8, 8), dashed: true, label: { text: 'B', anchor: 'mid', style: 'variable' } },
+          { kind: 'arrow', id: 'e-r8', role: 'derived', from: ZERO, to: vec2(8, 8), state: 'readonly', label: { text: 'R', anchor: 'mid', offsetPx: vec2(12, 10), style: 'variable' } },
         ],
       },
     ],
@@ -254,7 +254,7 @@ function paintSum(b: Vec2): void {
   const long = optLong.checked;
   for (const target of demo.targets) {
     mountSvg(target.stage, renderSceneSvg({
-      instanceId: `sum-main-${target.theme === CANDIDATE_ILLUSTRATED ? 'a' : target.theme === CANDIDATE_LINEWORK ? 'b' : 'c'}`,
+      instanceId: `sum-main-${variantOf(target.theme)}`,
       title: `${def.title} · ${target.theme.name}`,
       widthPx: slot.widthPx,
       heightPx: slot.heightPx,
@@ -323,14 +323,14 @@ function cancelMotion(): void {
 
 // ----- rendering -----------------------------------------------------------
 
-function themeMode(): 'a' | 'b' | 'c' | 'both' {
+function themeMode(): 'a' | 'b' | 'both' {
   const picked = controls.querySelector<HTMLInputElement>('input[name="theme"]:checked');
   const v = picked?.value;
-  return v === 'b' || v === 'c' || v === 'both' ? v : 'a';
+  return v === 'b' || v === 'both' ? v : 'a';
 }
 
 function variantOf(theme: ThemeDefinition): string {
-  return theme === CANDIDATE_ILLUSTRATED ? 'a' : theme === CANDIDATE_LINEWORK ? 'b' : 'c';
+  return theme === CANDIDATE_ILLUSTRATED ? 'a' : 'b';
 }
 
 const entrances = new WeakMap<HTMLElement, { slot: Slot; section: SectionDef }>();
@@ -343,10 +343,7 @@ function render(): void {
   const variants: ThemeDefinition[] =
     mode === 'a' ? [CANDIDATE_ILLUSTRATED]
     : mode === 'b' ? [CANDIDATE_LINEWORK]
-    : mode === 'c' ? [CANDIDATE_INSTRUMENT]
     : [...CANDIDATE_THEMES];
-  if (mode === 'c') document.body.setAttribute('data-pv-page', 'dark');
-  else document.body.removeAttribute('data-pv-page');
 
   scenesRoot.replaceChildren();
   scenesRoot.classList.toggle('pv-grayscale', optGray.checked);

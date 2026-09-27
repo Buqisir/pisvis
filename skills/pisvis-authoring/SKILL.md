@@ -13,7 +13,8 @@ description: Use verified pisvis capabilities to author checkable teaching diagr
 读 README、src/index.ts、当前阶段 Issue 与 docs/HANDOFF.md。
 当前真实实现：向量、世界/SVG 坐标映射、二维仿射变换（applyAffine/invertAffine）、视口自适应 fitViewport、
 主题 token 与 CSS 适配（CANDIDATE_THEMES / themeToCssText）、多图元场景序列化 renderSceneSvg、箭头几何和 renderArrowSvg。
-两套主题均为候选，未经维护者批准。实验页端点拖动与 gallery 样板是演示层，不是可调用的库 API。
+A「轻质感科学插画」为选定方向（v2，待维护者确认）；B「精密清爽线描」为候选对照；深色 C 已移除。
+实验页端点拖动与 gallery 样板是演示层，不是可调用的库 API。
 模板、自动受力分析、平抛模型、场景 JSON、Signals/Valibot、Motion/KaTeX 尚未集成。
 不能把 TECH_RADAR 中的候选写成已经调用成功的接口。
 

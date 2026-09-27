@@ -6,7 +6,6 @@ import { expect, test, type Page } from '@playwright/test';
 const THEMES = [
   ['#theme-a', 'candidate-illustrated'],
   ['#theme-b', 'candidate-linework'],
-  ['#theme-c', 'candidate-instrument'],
 ] as const;
 const SVG_COUNT = 19; // 13 specimen cells + 1 composition + 1 decomposition + 4 edge panels
 
@@ -32,7 +31,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/gallery.html');
 });
 
-test('loads; all three themes render; compare shows 3 stages per scene', async ({ page }) => {
+test('loads; both themes render; compare shows 2 stages per scene', async ({ page }) => {
   // screenshots are taken of the final static state; reduce motion so no
   // entrance is in flight and the linkage demo never autostarts
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -45,18 +44,11 @@ test('loads; all three themes render; compare shows 3 stages per scene', async (
   await page.locator('#theme-b').check();
   await page.screenshot({ path: 'test-results/screenshots/gallery-b.png', fullPage: true });
 
-  await page.locator('#theme-c').check();
-  await expect(page.locator('[data-pv-theme="candidate-instrument"] svg')).toHaveCount(SVG_COUNT);
-  await expect(page.locator('body')).toHaveAttribute('data-pv-page', 'dark');
-  await page.screenshot({ path: 'test-results/screenshots/gallery-c.png', fullPage: true });
-
   await page.locator('#theme-both').check();
-  await expect(page.locator('svg.pv-scene')).toHaveCount(3 * SVG_COUNT);
+  await expect(page.locator('svg.pv-scene')).toHaveCount(2 * SVG_COUNT);
   for (const [, id] of THEMES) {
     await expect(page.locator(`[data-pv-theme="${id}"] svg`)).toHaveCount(SVG_COUNT);
   }
-  // compare mode: only the stages are themed, the page itself stays light
-  await expect(page.locator('body')).not.toHaveAttribute('data-pv-page', 'dark');
   await page.screenshot({ path: 'test-results/screenshots/gallery-compare.png', fullPage: true });
 });
 
@@ -110,10 +102,10 @@ for (const [radio] of THEMES) {
   });
 }
 
-test('candidate C labels read >=13px effective at 1280px wide', async ({ page }) => {
+test('labels and ticks read >=13px effective at 1280px wide', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.reload();
-  await page.locator('#theme-c').check();
+  await page.locator('#theme-a').check();
   const minFont = await page.evaluate(() => {
     let min = Infinity;
     for (const t of document.querySelectorAll('svg .pv-label, svg .pv-tick')) {
@@ -127,20 +119,6 @@ test('candidate C labels read >=13px effective at 1280px wide', async ({ page })
   expect(minFont).toBeGreaterThanOrEqual(12.5); // ~13 nominal with rounding slack
 });
 
-test('candidate C page chrome is dark only in single-C mode', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.reload();
-  const bodyBg = () => page.evaluate(() =>
-    getComputedStyle(document.body).backgroundColor);
-  const light = await bodyBg();
-  await page.locator('#theme-c').check();
-  const dark = await bodyBg();
-  const channels = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(dark)!.slice(1).map(Number);
-  for (const c of channels) expect(c).toBeLessThan(40);
-  expect(dark).not.toBe(light);
-  await page.locator('#theme-a').check();
-  expect(await bodyBg()).toBe(light);
-});
 
 for (const [radio] of THEMES) {
   test(`no two text elements overlap within any svg (${radio})`, async ({ page }) => {
@@ -169,12 +147,12 @@ for (const [radio] of THEMES) {
   });
 }
 
-test('theme switching changes no readouts and no arrow geometry (A/B/C)', async ({ page }) => {
+test('theme switching changes no readouts and no arrow geometry', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.reload();
   const geoA = await arrowGeo(page);
   const readoutsA = await page.locator('.scene-readout').allTextContents();
-  for (const [radio] of [['#theme-b'], ['#theme-c'], ['#theme-a']] as const) {
+  for (const [radio] of [['#theme-b'], ['#theme-a']] as const) {
     await page.locator(radio).check();
     expect(await arrowGeo(page)).toEqual(geoA);
     expect(await page.locator('.scene-readout').allTextContents()).toEqual(readoutsA);
@@ -234,9 +212,6 @@ test.describe('emulated reduced motion', () => {
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
     await expect(page.locator('#demo-toggle')).toBeDisabled();
     expect(await page.evaluate(() => window.__pvDemo.loops)).toBe(0);
-    const ringAnim = await page.locator('.pv-state-selected .pv-ring').first()
-      .evaluate((el) => getComputedStyle(el).animationName);
-    expect(ringAnim).toBe('none');
   });
 });
 
@@ -269,14 +244,6 @@ for (const size of [{ width: 1280, height: 800 }, { width: 600, height: 900 }]) 
   });
 }
 
-test('candidate C mobile dark page at 600x900', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.setViewportSize({ width: 600, height: 900 });
-  await page.reload();
-  await page.locator('#theme-c').check();
-  await expect(page.locator('body')).toHaveAttribute('data-pv-page', 'dark');
-  await page.screenshot({ path: 'test-results/screenshots/gallery-c-mobile.png', fullPage: true });
-});
 
 test('keyboard reaches every control with a visible focus outline', async ({ page }) => {
   const stops: Array<[string, string]> = [];
@@ -365,17 +332,12 @@ test('theme switch while the demo plays keeps exactly one rAF loop', async ({ pa
   await page.locator('.specimen[data-key="sum"] .stage-outer').scrollIntoViewIfNeeded();
   await page.waitForFunction(() => window.__pvDemo.loops === 1, { timeout: 15000 });
   const framesBefore = await page.evaluate(() => window.__pvDemo.frames);
-  await page.locator('#theme-c').check();
+  await page.locator('#theme-b').check();
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => window.__pvDemo.loops)).toBe(1);
   expect(await page.evaluate(() => window.__pvDemo.frames)).toBeGreaterThan(framesBefore);
-  // no leftover WAAPI entrance animations; pv-breathe is the intended
-  // infinite CSS pulse on selected rings under the glow theme
-  const leftovers = await page.evaluate(() =>
-    document.getAnimations()
-      .filter((a) => (a as CSSAnimation).animationName !== 'pv-breathe')
-      .length);
-  expect(leftovers).toBe(0);
+  // no leftover animations after a re-render while the demo keeps playing
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
 });
 
 test('replaying twice quickly does not stack animations', async ({ page }) => {

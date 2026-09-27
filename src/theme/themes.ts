@@ -4,38 +4,41 @@ import type { ThemeDefinition } from './tokens.js';
 // Both themes are CANDIDATES awaiting maintainer review — never mark approved.
 // srgb fallbacks are the in-gamut conversion of the authored OKLCH values.
 
+// v2 (2026-09-28): maintainer picked A's direction but asked to remove the
+// "plastic" feel — gradients/texture/halo blobs and the thick round strokes are
+// gone; palette airier; component is soft terracotta instead of dark bronze.
 export const CANDIDATE_ILLUSTRATED: ThemeDefinition = checkTheme({
   id: 'candidate-illustrated',
-  version: 1,
+  version: 2,
   status: 'candidate',
   name: '轻质感科学插画',
   color: {
-    paper: { oklch: 'oklch(97.4% 0.012 85)', srgb: '#faf6ee' },
-    ink: { oklch: 'oklch(27% 0.035 260)', srgb: '#1c2738' },
+    paper: { oklch: 'oklch(98.6% 0.008 85)', srgb: '#fdfaf4' },
+    ink: { oklch: 'oklch(30% 0.03 260)', srgb: '#252e3d' },
     muted: { oklch: 'oklch(52% 0.02 260)', srgb: '#626975' },
-    grid: { oklch: 'oklch(91% 0.012 85)', srgb: '#e5e1d9' },
-    axis: { oklch: 'oklch(45% 0.02 260)', srgb: '#4f5661' },
-    input: { oklch: 'oklch(57% 0.12 165)', srgb: '#008d65' },
-    derived: { oklch: 'oklch(47% 0.15 265)', srgb: '#3054ae' },
-    component: { oklch: 'oklch(38% 0.08 62)', srgb: '#60370b' },
-    guide: { oklch: 'oklch(62% 0.03 70)', srgb: '#928373' },
-    selection: { oklch: 'oklch(27% 0.035 260)', srgb: '#1c2738' },
-    error: { oklch: 'oklch(55% 0.2 27)', srgb: '#cc2827' },
+    grid: { oklch: 'oklch(93.5% 0.008 85)', srgb: '#ece9e4' },
+    axis: { oklch: 'oklch(52% 0.02 260)', srgb: '#626975' },
+    input: { oklch: 'oklch(63% 0.1 168)', srgb: '#409c7d' },
+    derived: { oklch: 'oklch(45% 0.13 265)', srgb: '#31509d' },
+    component: { oklch: 'oklch(54% 0.11 50)', srgb: '#a1592e' },
+    guide: { oklch: 'oklch(66% 0.02 70)', srgb: '#9a9085' },
+    selection: { oklch: 'oklch(30% 0.03 260)', srgb: '#252e3d' },
+    error: { oklch: 'oklch(55% 0.19 27)', srgb: '#c9302d' },
     focus: { oklch: 'oklch(55% 0.15 250)', srgb: '#0f74c5' },
   },
-  stroke: { main: 3, aux: 2, axis: 1.5, grid: 1 },
-  arrow: { headLength: 16, headWidth: 12 },
-  point: { radius: 5, handleRadius: 8, hitRadius: 16 },
-  dash: { guide: '7 6', component: '4 4' },
+  stroke: { main: 2, aux: 1.4, axis: 1.2, grid: 0.75 },
+  arrow: { headLength: 13, headWidth: 9 },
+  point: { radius: 4, handleRadius: 7, hitRadius: 16 },
+  dash: { guide: '6 5', component: '4 4' },
   text: {
     family: 'ui-rounded, "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif',
     variableFamily: 'ui-serif, Georgia, "Songti SC", serif',
     numericFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
-    label: 17, value: 14, caption: 12,
+    label: 16, value: 13, caption: 11.5,
   },
   space: { labelOffset: 10, safeMargin: 36 },
   material: 'soft',
-  motion: { emphasisMs: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+  motion: { emphasisMs: 260, easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)' },
 });
 
 export const CANDIDATE_LINEWORK: ThemeDefinition = checkTheme({
@@ -73,45 +76,7 @@ export const CANDIDATE_LINEWORK: ThemeDefinition = checkTheme({
 });
 
 
-// Candidate C requested by the maintainer (2026-09-28): a dark, luminous
-// "instrument" direction. input raised 84% -> 86% because the original left
-// only 0.07 lightness separation from component (needs >= 0.08).
-export const CANDIDATE_INSTRUMENT: ThemeDefinition = checkTheme({
-  id: 'candidate-instrument',
-  version: 1,
-  status: 'candidate',
-  name: '深色仪器感',
-  color: {
-    paper: { oklch: 'oklch(17% 0.03 255)', srgb: '#06101c' },
-    ink: { oklch: 'oklch(94% 0.015 240)', srgb: '#e3edf4' },
-    muted: { oklch: 'oklch(74% 0.03 245)', srgb: '#9cadbd' },
-    grid: { oklch: 'oklch(30% 0.04 250)', srgb: '#1e2f41' },
-    axis: { oklch: 'oklch(72% 0.04 240)', srgb: '#8fa9bc' },
-    input: { oklch: 'oklch(86% 0.13 200)', srgb: '#49eaf2' },
-    derived: { oklch: 'oklch(68% 0.18 290)', srgb: '#9980fe' },
-    component: { oklch: 'oklch(77% 0.14 75)', srgb: '#e8a63d' },
-    guide: { oklch: 'oklch(62% 0.04 240)', srgb: '#718a9c' },
-    selection: { oklch: 'oklch(94% 0.015 240)', srgb: '#e3edf4' },
-    error: { oklch: 'oklch(68% 0.2 25)', srgb: '#fc5855' },
-    focus: { oklch: 'oklch(90% 0.13 120)', srgb: '#d3eb85' },
-  },
-  stroke: { main: 2.25, aux: 1.5, axis: 1.25, grid: 0.6 },
-  arrow: { headLength: 13, headWidth: 9 },
-  point: { radius: 4, handleRadius: 7, hitRadius: 16 },
-  dash: { guide: '5 5', component: '6 4' },
-  text: {
-    family: 'system-ui, "PingFang SC", "Hiragino Sans GB", sans-serif',
-    variableFamily: 'ui-serif, Georgia, "Songti SC", serif',
-    numericFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
-    label: 15, value: 13, caption: 11,
-  },
-  space: { labelOffset: 9, safeMargin: 36 },
-  material: 'glow',
-  motion: { emphasisMs: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-});
-
 export const CANDIDATE_THEMES: readonly ThemeDefinition[] = [
   CANDIDATE_ILLUSTRATED,
   CANDIDATE_LINEWORK,
-  CANDIDATE_INSTRUMENT,
 ];

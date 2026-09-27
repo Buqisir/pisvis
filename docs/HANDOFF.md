@@ -185,3 +185,22 @@ macOS 本机；Node 24.15.0 / npm 11.12.1；TypeScript 6.0.3、Vite 8.3.0、@pla
   最小宽调整为不缩小 svg（刻度有效字号 ≥12.5px，浏览器断言三套主题验证）。
 - 已知限制：仍仅 Chromium；C 的辉光在投影/打印下未验证（投影与打印请用浅色主题）；动效与呼吸
   脉冲未在 Firefox/WebKit 实测；visibilitychange 恢复路径由代码实现但浏览器测试未覆盖真隐藏。
+
+### E.3 维护者反馈与 A v2
+
+2026-09-28（UTC+08）维护者反馈 PR #7：选定 A「轻质感科学插画」为方向，要求去掉“塑料感”、
+更轻更透气，不要深色主题。本补丁移除候选 C（深色仪器感/glow 材质/暗色页/呼吸脉冲全部撤出），
+A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
+
+- A v2 token：paper oklch(98.6% 0.008 85)；角色 input/derived/component 明度序 0.63/0.45/0.54
+  （ΔL 0.09/0.18/0.09，≥0.08）；component 由深铜 oklch(38% 0.08 62) 改柔和赭 oklch(54% 0.11 50)；
+  线宽 main 3→2 / aux 2→1.4 / axis 1.5→1.2 / grid 1→0.75；箭头 16×12→13×9；点 r5→4、手柄 8→7；
+  刻度/读数 14→13；动效 260ms cubic-bezier(0.25,0.8,0.25,1)。全部满足既有对比度/明度差/色域测试。
+- 序列化收窄：渐变 defs、点纹理、halo 圆、发光滤镜、半格细网格全部移除——soft 材质现在仅表示
+  圆头线帽 + 手柄点后 10% 淡 halo；输出不再含 <defs> 或 url(#) 引用。
+- 标签：`SceneLabel.style: 'variable'|'text'`；数学单字母用斜体衬线（pv-label-var），中文用正文。
+- 验证：`npm run check` 57 通过；`npm run test:browser` 39 通过（M1 19 + gallery 20）。
+  新增断言：每主题所有 pv-head/pv-dot/pv-handle-dot/pv-zero/pv-axis-head 计算填充为角色/坐标轴色
+  或渐变，绝不默认黑/无填充；有效字号 ≥12.5px。
+- 截图重生成 gallery-{a,b,compare,grayscale,long-labels,mobile}.png；gallery-c* 已删除。
+- demo-dist gallery 页 ≈26.8kB（js 24.2 + css 2.55 + html 2.1），与 E.2 基本持平。

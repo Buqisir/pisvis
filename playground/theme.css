@@ -17,16 +17,12 @@
 .pv-gridline { stroke: var(--pv-grid); }
 .pv-axis-line { stroke: var(--pv-axis); }
 .pv-axis-head { fill: var(--pv-axis); }
-.pv-material-flat .pv-head, .pv-material-glow .pv-head { fill: var(--pv-role); }
+.pv-head { fill: var(--pv-role); }
 .pv-material-flat .pv-dot { fill: var(--pv-paper); stroke: var(--pv-role); }
-.pv-material-glow .pv-dot { fill: var(--pv-role); }
-.pv-material-soft .pv-dot, .pv-zero { fill: var(--pv-role); }
+.pv-material-soft .pv-dot { fill: var(--pv-role); stroke: var(--pv-paper); stroke-width: 1.5px; }
+.pv-zero { fill: var(--pv-role); }
 .pv-material-flat .pv-zero { fill: var(--pv-role); stroke: none; }
-.pv-halo { fill: var(--pv-role); fill-opacity: 0.18; }
-
-/* soft-material gradient stops (lighter top -> role color) */
-.pv-grad-top { stop-color: color-mix(in srgb, var(--pv-role) 72%, var(--pv-paper)); }
-.pv-grad-bot { stop-color: var(--pv-role); }
+.pv-halo { fill: var(--pv-role); fill-opacity: 0.10; }
 
 /* error must not be color-only: role stroke stays, error underlay adds a dash */
 .pv-error-underlay > * { stroke: var(--pv-error); fill: none; }
@@ -66,16 +62,12 @@
   stroke-width: calc(var(--pv-stroke-main) + 0.75px);
 }
 
-/* glow material (candidate-instrument): breathing selection ring, minor grid */
-.pv-gridline-minor { opacity: 0.45; }
 .pv-ring { transform-box: fill-box; transform-origin: center; }
-[data-pv-theme="candidate-instrument"] .pv-state-selected .pv-ring {
-  animation: pv-breathe 2.4s ease-in-out infinite;
-}
-@keyframes pv-breathe {
-  0%, 100% { opacity: 0.45; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.18); }
-}
+/* A v2: lighter selection ring */
+[data-pv-theme="candidate-illustrated"] .pv-ring { stroke-width: 1.5px; }
+
+/* variable labels: italic serif (scientific illustration convention) */
+.pv-label-var { font-family: var(--pv-font-variable); font-style: italic; }
 
 /* reduced motion: the checkbox adds .pv-reduced-motion; the OS setting matches too */
 .pv-reduced-motion .pv-handle-dot, .pv-reduced-motion .pv-ring {
