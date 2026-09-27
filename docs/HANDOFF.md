@@ -103,3 +103,58 @@ GitHub Actions 固定到 v7 系列完整提交 SHA（checkout v7.0.1、setup-nod
 - 无滚轮缩放/平移；缩放范围固定 20–60；标签固定不避让。
 - 方向读数为相对 +x 轴的角度（1 位小数）；零向量显示「—」。
 - 终点实心手柄会部分遮住箭头尖端；留给 M2 视觉样板统一处理。
+
+## E. M2-A 视觉候选记录
+
+日期：2026-09-28（UTC+08）。实现 [Issue #3](https://github.com/Buqisir/pisvis/issues/3) 的 A 部分：
+主题 token、CSS 适配、场景序列化、视口自适应与双候选样板页。提交 <commit>。
+两套主题均为候选，维护者尚未选择。
+
+### 环境
+
+macOS 本机；Node 24.15.0 / npm 11.12.1；TypeScript 6.0.3、Vite 8.3.0、@playwright/test 1.63.0（Chromium build 1243）。
+本轮无新增依赖；核心运行时依赖仍为零。
+
+### 实际执行
+
+- `npm run check`：55 通过 / 0 失败（M1 的 30 + 本轮 theme 10、scene 11、fit 4）。
+- `npm run test:browser`（Chromium）：31 通过 / 0 失败（M1 的 19 + gallery 12，含两主题文本重叠断言）。
+  截图：test-results/screenshots/gallery-{a,b,compare,grayscale,long-labels,mobile}.png（不入库）。
+- `npm run build:demo`：gallery 成为第二个 Vite 页面。产物增量（实测本机构建）：
+  main(dd7194f) 演示页 ≈ index.html 2.2kB + js 8.3kB + css 1.5kB；
+  本分支 index 页 ≈ 18.1kB（共享块把库代码拆出），gallery 页新增 ≈ 21.5kB（gallery.js 17.4kB + css 2.1kB + html 2.0kB）。
+  总量小，无第三方运行时。
+- dist/index.js 的无 DOM 导入测试（kernel.test.mjs「pure renderer imports and runs in Node」）继续通过：
+  theme/scene/fit 均为纯数据与纯函数。
+
+### 本轮新增能力
+
+- `src/theme/tokens.ts`：ThemeDefinition/ColorRole/ColorToken + `checkTheme` 运行时校验（id、版本、色值格式、字号、动效白名单）。
+- `src/theme/themes.ts`：`CANDIDATE_ILLUSTRATED`（soft）与 `CANDIDATE_LINEWORK`（flat），`CANDIDATE_THEMES` 汇总。
+  srgb 值为 OKLCH→sRGB 实测换算；相对起点值修改：A component oklch(62% 0.13 65)→oklch(38% 0.08 62)
+  （与 input/derived 的明度差不足 0.08 且提亮会破坏 3:1 对比度），B component 60%→61%（明度差恰好 0.08 无余量），
+  两主题 focus 彩度 0.16→0.15（原值略超 sRGB 色域 ~1/255）；A component 虚线改 '4 4'、B 改 '5 3'（'1.5 3.5' 在细线宽下几乎不可见）。
+- `src/theme/css.ts`：`themeToCssText(theme, selector)` — sRGB 块在前，`@supports` 升级 OKLCH；选择器与全部 token 严格白名单。
+- `src/render/scene.ts`：`renderSceneSvg` — axes/arrow/point/segment、角色与状态类名、实例命名空间 id、
+  url(#) 局部引用、零向量 pv-zero、错误态非纯色彩提示（衬底虚线）、手柄（readonly 无）、转义标签（≤200 字符）。
+- `src/render/escape.ts`：xml 转义从 svg.ts 抽出共享（svg.ts 行为不变）。
+- `src/core/fit.ts`：`fitViewport` 统一比例适配，退化范围按 1 世界单位处理。
+- `gallery.html` + `playground/gallery.ts` + `playground/theme.css`：四节样板——图元/状态为独立小格（HTML 图注，
+  不与坐标轴混排），退化与边界拆为四个独立面板，合成/分解为大图（720px 级，stage 填满卡宽）；
+  主题单选与并排对比（≥1100px 双列）、灰度/减少动效/长标签开关、HTML 读数面板（与图形同源数据）。
+- 标签定位：end 锚点沿箭头方向越出 tip；mid 锚点在水平项放下侧、竖直项放左侧、斜向取垂足侧；
+  带手柄项的有效偏移至少越过手柄外环；刻度数字跳过轴线交点的斜角格。浏览器断言默认标签下
+  同一 svg 内任意两个 text 的 bbox 互不重叠（A/B 主题均验）。
+- `playground/format.ts`：fmt 抽出共享；vite.config.mjs 改多页构建；index.html 页头加样板链接。
+
+### 已修正的实现问题
+
+- scene 重复 id 校验曾误用 `Set.add` 返回值（恒真），改为 `has` + `add`。
+- M1 键盘测试补链接受影响的断言方式（页头新增样板链接后 Tab 顺序多一站）。
+
+### 未验证 / 已知限制
+
+- 浏览器仅 Chromium；Firefox/WebKit、真实触摸、OKLCH 不支持环境下的 sRGB 降级路径未在旧浏览器实测。
+- 长标签以固定锚点+人工偏移适配，无自动避让；CI（无中文字体包）可能与本机字形不同。
+- tick 数字仅在 B（线描）显示；A 隐藏刻度文字。灰度只是检查开关，非打印管线。
+- 主题切换几何不变的前提是两主题共用同一适配 margin（取两主题 safeMargin 最大值 36px）。
