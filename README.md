@@ -1,28 +1,59 @@
 # pisvis
 
-**从向量、坐标和几何开始，做自己的物理可视化库。**
+**有自己审美、可以反复组合使用、由数学与物理关系驱动的二维教学可视化。**
 
-pisvis 是一个独立的、面向高中物理教学与 Agent 的二维可视化项目。
-我们的代码决定图形怎样生成、对象如何关联、交互如何发生；浏览器原生 SVG 负责显示。
-它不是现成可视化框架的换皮，也不以重写浏览器或“一次做完全部高中物理”为目标。
+pisvis 是独立的物理可视化库，不是每来一道题就临时生成一页代码。
+自己掌握物理对象、题型模板、关系绑定、教学交互和视觉规则；通用几何、响应、校验、排版和渲染能力按需借用。
+从向量、坐标和自己的箭头开始，但不把“所有东西都自己重写”当作目标。
+
+## 给本地 Agent：从这里开始
+
+[Spec 总纲 #2](https://github.com/Buqisir/pisvis/issues/2) 说明自研/依赖边界与产品目标。
+按顺序执行：[M1 #1 工程复现与箭头拖动](https://github.com/Buqisir/pisvis/issues/1)
+→ [M2 #3 视觉样板与可复用数学模板](https://github.com/Buqisir/pisvis/issues/3)
+→ [M3 #4 平抛题型与多视图联动](https://github.com/Buqisir/pisvis/issues/4)。
+
+先读 [AGENTS.md](AGENTS.md) 和 [交接记录](docs/HANDOFF.md)。每阶段提交小 PR，不一次实现整个路线图。
 
 ## 当前真的有什么
 
-| 已实现的种子能力 | 边界 |
+实现基线仍是初始化提交 d2168de。本次补充的是设计和 Spec，不是新能力的实现或依赖安装。
+
+| 已有种子能力 | 边界 |
 | --- | --- |
-| 二维向量运算、长度与单位方向 | 零向量方向返回 `null`，非有限值明确报错 |
-| 世界坐标与 SVG 逻辑像素的双向换算 | 世界 y 向上；仅支持统一缩放和平移 |
-| 自己计算箭杆与箭头几何 | 支持短箭头、重合端点；不是物理力的自动判定 |
-| 纯函数输出 SVG 字符串 | 无 DOM 依赖，文字转义；不接受任意 SVG/HTML |
-| 参数输入与缩放滑块实验页源码 | 暂无拖动、鼠标缩放、场景保存和自动标签排版 |
-| TypeScript 检查、库构建、25 个 Node 测试 | 不代表浏览器交互或 Vite 构建已经验收 |
+| 二维向量运算、长度与单位方向 | 零向量方向返回 null，非有限值明确报错 |
+| 世界坐标与 SVG 逻辑像素双向换算 | 世界 y 向上；仅统一缩放和平移 |
+| 自己计算箭杆与箭头几何 | 支持短箭头/重合端点，不自动判断真实物理力 |
+| 纯函数输出 SVG 字符串 | 无 DOM 依赖，文字转义，不接受任意 SVG/HTML |
+| 参数输入与缩放滑块实验页源码 | 暂无端点拖动、模板保存或自动标签排版 |
+| 类型检查、库编译、25 个 Node 测试的初始化记录 | 不代表完整安装、Vite 或真实浏览器已验收 |
 
-**初始化状态：核心检查已在沙盒通过；依赖完整安装、锁文件、Vite 演示构建与浏览器验收留给首轮 Issue。**
-详细证据与环境限制见 [交接记录](docs/HANDOFF.md)。不把计划写成已完成的功能。
+初始化仅在预装编译器环境完成核心检查。依赖完整安装、真实锁文件、演示构建与浏览器验收仍由 M1 完成。
+本次未安装 Signals/Valibot/Motion/KaTeX，也未引入任何 GPU/布局框架，不把候选写成已完成。
 
-## 启动
+## 建设方向
 
-建议使用 `.nvmrc` 指定的 Node 24。也声明兼容 Node 22.12+ 的 22 系列；首次接手需实际复核。
+组件复用：箭头、坐标轴、物块和标注一处改进，多场景继承。
+关系复用：不仅复用外观，还保存锚点、连接和量之间的联系。
+题型复用：适用条件、参数、单位、模型、图形绑定、操作和讲解可重复实例化。
+
+题目条件 → 明确模型 → 同一份有效状态 → 情境图、公式、函数图和读数。
+主题、视口和标签位置不改变物理结果；同模板多个实例互不污染。
+具体风格需用可运行样板确认，目前的候选不是维护者已经批准的品牌。
+
+## 依赖分工
+
+普通教学图以 SVG/HTML/CSS 和 Pointer Events 为主，小数学内核保持独立、无 DOM/网络。
+M2 优先采用 Signals core 与 Valibot；M3 采用 Motion JavaScript 和 KaTeX 的局部适配。
+thi.ng 按复杂几何需求评估；PixiJS、Penrose/Bloom、SceneryStack、TypeGPU 留作架构参考或隔离实验。
+
+**零依赖是当前小内核的状态，不是全项目永久限制；候选列表也不是一次全部安装的清单。**
+详见 [依赖决策](docs/DEPENDENCIES.md)、[技术参考与官方来源](docs/TECH_RADAR.md)。
+不绑定 React、英语题库或某个 Agent SDK，不预建多包工程。
+
+## 启动现有种子
+
+建议使用 .nvmrc 的 Node 24；M1 先复核实际受支持工具链和精确版本。
 
 ```sh
 npm install
@@ -30,15 +61,15 @@ npm run check
 npm run dev
 ```
 
-初始化尚未提交 `package-lock.json`：联网本地 Agent 应先完成依赖复核、生成并提交锁文件；
-之后使用 `npm ci` 复现，不手写或伪造依赖完整性数据。
+初始化尚无 package-lock.json；联网本地 Agent 应生成真实锁文件并提交，然后用 npm ci 复现。
+不能以本次文档更新声称这些命令已全部运行通过。
 
-`npm run build` 只编译库并输出 ESM 与类型声明到 `dist/`。
-`npm run build:demo` 用 Vite 构建实验页到 `demo-dist/`。
-`npm run verify:all` 包含核心检查与演示页构建，但仍不能替代浏览器交互测试。
-项目暂设 `private: true`，防止误发 npm；这不改变 GitHub 仓库的公开状态。
+npm run build 只编译库，ESM 与类型声明输出到 dist/。
+npm run build:demo 用 Vite 输出实验页到 demo-dist/。
+npm run verify:all 包含核心检查与实验页构建，但仍不能替代浏览器测试。
+项目保留 private:true，防止误发 npm；不改变 GitHub 仓库的公开性。
 
-## 一个真实可用的入口
+## 现有真实 API 示例
 
 在仓库内构建后：
 
@@ -55,26 +86,18 @@ const svg = renderArrowSvg({
 });
 ```
 
-这里只展示真实 API。`incline()`、自动受力分析、物理求解器和 Agent Tools 尚未实现。
+模板实例、平抛模型、自动受力分析和 Agent Tools 尚未实现；以上仅展示真实可用入口。
 
-## 自己做什么，借用什么
+## 设计文档
 
-自己做：向量、坐标变换、几何生成、逐步增长的场景结构、交互约束、教学图形规则，以及有明确假设的物理模型。
-借用：浏览器 SVG/HTML/CSS；以后接收 Pointer Events；开发期的 TypeScript、Vite，以及 Node 自带测试工具。
-**核心没有第三方运行时依赖，也不绑定 React 或当前英语题库。**
+- [产品方向](docs/PRODUCT.md) / [视觉设计](docs/VISUAL_DESIGN.md)：审美样板、教学表达和复用目标。
+- [架构](docs/ARCHITECTURE.md) / [复用与数学绑定](docs/REUSE_AND_BINDINGS.md)：模型、实例、表示、版本和约束。
+- [依赖](docs/DEPENDENCIES.md) / [技术参考](docs/TECH_RADAR.md) / [实验](docs/EXPERIMENTS.md)：先采用什么、研究什么，以及退出条件。
+- [路线](docs/ROADMAP.md) / [教辅地图](docs/CURRICULUM.md) / [交接](docs/HANDOFF.md)：实施顺序、来源边界和实际验证。
+- [Agent 创作 Skill](skills/pisvis-authoring/SKILL.md)：只使用已经实现并核验的能力。
 
-## 给下一位开发者
+## 资料与许可
 
-先读 [AGENTS.md](AGENTS.md)，再看当前 GitHub Issue 中的 Spec。
-
-- [架构与边界](docs/ARCHITECTURE.md)：各层职责、坐标、单位、安全与正确性。
-- [依赖决策](docs/DEPENDENCIES.md)：为什么暂时只引入两个开发依赖。
-- [教材题材地图](docs/CURRICULUM.md)：六本教辅的目录依据与我们的工程建议分开记录。
-- [阶段路线](docs/ROADMAP.md)：每一步的交付与验收，不是全量开工清单。
-- [Agent 创作 Skill](skills/pisvis-authoring/SKILL.md)：只使用已实现能力，不虚构工具。
-
-## 教材与许可
-
-保留仓库创建时的 [Apache-2.0 许可证](LICENSE)。
-用户提供的教材/教辅 PDF 仅作为本地研究输入；不上传整书、扫描图、原题库、字体文件或未经授权的配图。
-仓库记录必要的书名、页码与抽象需求，示例由项目独立编写；代码许可证不为参考资料提供再分发授权。
+保留仓库创建时的 [Apache-2.0 LICENSE](LICENSE)。
+用户提供的教材/教辅只作为有权访问的研究输入，不上传整书、扫描页、原题库、字体文件或未经授权配图。
+记录必要的来源定位与抽象需求，示例独立编写；代码许可证不为参考资料或第三方品牌提供再分发授权。
