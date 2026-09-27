@@ -1,0 +1,16 @@
+node_modules/
+dist/
+demo-dist/
+coverage/
+test-results/
+playwright-report/
+.local/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+*.log
+.DS_Store
+# Reference books and scans are private working inputs, not repository assets.
+*.pdf
+references/private/

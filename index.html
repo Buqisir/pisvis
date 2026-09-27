@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pisvis · 从一个向量开始</title>
+    <link rel="stylesheet" href="/playground/style.css" />
+  </head>
+  <body>
+    <main>
+      <header><p>PISVIS / FOUNDATION 0</p><h1>从一个向量开始</h1>
+        <p>自己的坐标、几何与图形算法。浏览器只负责显示。</p></header>
+      <section class="workspace" aria-label="向量实验台">
+        <form id="controls">
+          <h2>坐标实验</h2>
+          <p>世界坐标向右、向上为正。当前数值无物理单位。</p>
+          <label>起点 x <input id="ax" type="number" min="-4" max="4" step="0.25" value="-2" /></label>
+          <label>起点 y <input id="ay" type="number" min="-2" max="2" step="0.25" value="-1" /></label>
+          <label>终点 x <input id="bx" type="number" min="-4" max="4" step="0.25" value="2" /></label>
+          <label>终点 y <input id="by" type="number" min="-2" max="2" step="0.25" value="1" /></label>
+          <label>缩放 <input id="zoom" type="range" min="20" max="60" step="1" value="50" /></label>
+          <button type="reset">重置</button>
+          <p id="status" role="status" aria-live="polite"></p>
+        </form>
+        <div><div id="canvas" aria-label="向量图"></div>
+          <p class="note">重合端点显示一个点；这里只验证图形底座，不是受力分析或运动仿真。</p></div>
+      </section>
+      <footer>下一步：拖动端点、正确的指针坐标换算、浏览器测试。尚未实现自动排版与物理模型。</footer>
+    </main>
+    <script type="module" src="/playground/main.ts"></script>
+  </body>
+</html>

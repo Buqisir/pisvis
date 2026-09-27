@@ -1,0 +1,37 @@
+{
+  "name": "pisvis",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A small, original 2D physics visualization kernel for teaching and agents.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
+    "build:demo": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "check": "npm run typecheck && npm test",
+    "verify:all": "npm run check && npm run build:demo"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "vite": "8.0.10"
+  }
+}

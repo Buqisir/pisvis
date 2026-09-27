@@ -1,0 +1,15 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #f5f4ef; color: #1d3540; font: 16px/1.65 system-ui, sans-serif; }
+main { max-width: 1100px; margin: auto; padding: 48px 24px; }
+header > p:first-child { font-size: 12px; letter-spacing: .18em; }
+h1 { margin: 8px 0; font-size: clamp(28px, 4vw, 42px); }
+h2 { margin: 0 0 12px; font-size: 20px; }
+.workspace { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 32px; margin: 32px 0; padding: 28px; background: white; border: 1px solid #d2dbdd; border-radius: 12px; }
+label { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 12px 0; }
+input { max-width: 130px; min-width: 0; padding: 6px; font: inherit; }
+button { padding: 6px 18px; font: inherit; cursor: pointer; }
+#canvas { color: #145a66; border: 1px solid #d2dbdd; background: #fbfcfb; }
+#canvas svg { display: block; width: 100%; height: auto; }
+.note, footer, form p { font-size: 13px; }
+:focus-visible { outline: 3px solid #147d92; outline-offset: 3px; }
+@media (max-width: 760px) { .workspace { grid-template-columns: 1fr; padding: 18px; } }
