@@ -17,19 +17,20 @@ pisvis 是独立的物理可视化库，不是每来一道题就临时生成一�
 
 ## 当前真的有什么
 
-实现基线仍是初始化提交 d2168de。本次补充的是设计和 Spec，不是新能力的实现或依赖安装。
+初始化基线为 d2168de；M1（[Issue #1](https://github.com/Buqisir/pisvis/issues/1)）已完成工程复现与端点拖动，详见 docs/HANDOFF.md 的 D 节。
 
-| 已有种子能力 | 边界 |
+| 已有能力 | 边界 |
 | --- | --- |
 | 二维向量运算、长度与单位方向 | 零向量方向返回 null，非有限值明确报错 |
 | 世界坐标与 SVG 逻辑像素双向换算 | 世界 y 向上；仅统一缩放和平移 |
+| 二维仿射变换与求逆（DOMMatrix 同构） | 奇异/近奇异矩阵返回 null，不静默近似 |
 | 自己计算箭杆与箭头几何 | 支持短箭头/重合端点，不自动判断真实物理力 |
 | 纯函数输出 SVG 字符串 | 无 DOM 依赖，文字转义，不接受任意 SVG/HTML |
-| 参数输入与缩放滑块实验页源码 | 暂无端点拖动、模板保存或自动标签排版 |
-| 类型检查、库编译、25 个 Node 测试的初始化记录 | 不代表完整安装、Vite 或真实浏览器已验收 |
+| 实验页：坐标输入、缩放滑块、两端点原生拖动 | 演示层能力，非库 API；无模板保存或自动标签排版 |
+| 类型检查、库编译、30 个 Node 测试、Chromium 浏览器测试 | Firefox/WebKit 与真实触摸设备尚未验收 |
 
-初始化仅在预装编译器环境完成核心检查。依赖完整安装、真实锁文件、演示构建与浏览器验收仍由 M1 完成。
-本次未安装 Signals/Valibot/Motion/KaTeX，也未引入任何 GPU/布局框架，不把候选写成已完成。
+依赖完整安装、真实锁文件（npm ci）、Vite 构建与 Chromium 交互验收已在 M1 完成。
+仍未安装 Signals/Valibot/Motion/KaTeX，也未引入任何 GPU/布局框架，不把候选写成已完成。
 
 ## 建设方向
 
@@ -53,16 +54,15 @@ thi.ng 按复杂几何需求评估；PixiJS、Penrose/Bloom、SceneryStack、Typ
 
 ## 启动现有种子
 
-建议使用 .nvmrc 的 Node 24；M1 先复核实际受支持工具链和精确版本。
+使用 .nvmrc 的 Node 24（已在 24.15.0 / npm 11.12.1 验证）。
 
 ```sh
-npm install
+npm ci
 npm run check
-npm run dev
+npm run dev          # 或 npm run test:browser 跑 Chromium 交互测试
 ```
 
-初始化尚无 package-lock.json；联网本地 Agent 应生成真实锁文件并提交，然后用 npm ci 复现。
-不能以本次文档更新声称这些命令已全部运行通过。
+仓库含真实 package-lock.json；锁文件存在后始终用 npm ci 复现。
 
 npm run build 只编译库，ESM 与类型声明输出到 dist/。
 npm run build:demo 用 Vite 输出实验页到 demo-dist/。

@@ -27,11 +27,13 @@
     "build:demo": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "npm run build && node --test tests/*.test.mjs",
+    "test:browser": "playwright test",
     "check": "npm run typecheck && npm test",
     "verify:all": "npm run check && npm run build:demo"
   },
   "devDependencies": {
-    "typescript": "5.8.3",
-    "vite": "8.0.10"
+    "@playwright/test": "1.63.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.0"
   }
 }
