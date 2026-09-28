@@ -126,7 +126,8 @@ test('updateScene: readonly-field, invalid-operation, all-or-nothing', () => {
   const setLength = authoring.updateScene({ document: clone(doc), operations: [{ op: 'set-length', value: 9 }] });
   assert.equal(setLength.ok, false);
   assert.equal(setLength.errors[0].code, 'readonly-field');
-  assert.match(setLength.errors[0].hint, /start|end/);
+  assert.ok(setLength.errors[0].hint && !/start|end/.test(setLength.errors[0].hint),
+    'readonly hint is capability-generic, not arrow-specific');
   const badOp = authoring.updateScene({ document: clone(doc), operations: [{ op: 'explode', value: 1 }] });
   assert.equal(badOp.errors[0].code, 'invalid-operation');
   assert.ok(badOp.errors[0].allowedValues.includes('set-end'));
@@ -199,10 +200,11 @@ test('render twice gives identical svg; theme/canvas/viewport do not change deri
 
 test('listCapabilities: short catalog, stable order, keyword filter', () => {
   const all = authoring.listCapabilities();
-  assert.equal(all.total, 1);
-  assert.equal(all.items[0].id, 'arrow');
-  assert.equal(authoring.listCapabilities({ keyword: '向量' }).total, 1);
-  assert.equal(authoring.listCapabilities({ keyword: 'vector' }).total, 1);
+  assert.equal(all.total, 3);
+  assert.deepEqual(all.items.map((i) => i.id), ['arrow', 'vector-add', 'vector-decompose']);
+  assert.equal(authoring.listCapabilities({ keyword: '向量' }).total, 3);
+  assert.equal(authoring.listCapabilities({ keyword: 'vector' }).total, 3);
+  assert.equal(authoring.listCapabilities({ keyword: '分解' }).total, 1);
   assert.equal(authoring.listCapabilities({ keyword: '平抛' }).total, 0);
   assert.equal(authoring.listCapabilities({ kind: 'physics-template' }).total, 0);
 });
@@ -229,7 +231,7 @@ test('describeCapability returns schemas, constraints and runnable examples', ()
   assert.equal(missing.errors[0].code, 'missing-field');
   const unk = authoring.describeCapability({ id: 'nope', version: 1 });
   assert.equal(unk.errors[0].code, 'unknown-capability');
-  assert.deepEqual(unk.errors[0].allowedValues, ['arrow']);
+  assert.deepEqual(unk.errors[0].allowedValues, ['arrow', 'vector-add', 'vector-decompose']);
 });
 
 test('registry extensibility: a test-only capability flows through unchanged', () => {
@@ -266,6 +268,176 @@ test('registry extensibility: a test-only capability flows through unchanged', (
   assert.match(s.svg, /pv-dot/);
   // production registry never contains the test capability
   assert.equal(authoring.describeCapability({ id: 'test-dot', version: 1 }).ok, false);
+});
+
+// ---- M2 capabilities: vector-add / vector-decompose ----------------------------
+
+const CREATE_ADD = {
+  templateId: 'vector-add', templateVersion: 1,
+  params: { a: { x: 2, y: 1 }, b: { x: 0.5, y: 1.8 } },
+};
+const CREATE_DEC = {
+  templateId: 'vector-decompose', templateVersion: 1,
+  params: { v: { x: 2.4, y: 1.6 } },
+};
+
+test('vector-add: create/derive/update/validate/render happy path', () => {
+  const r = authoring.createScene(clone(CREATE_ADD));
+  assert.ok(r.ok, JSON.stringify(r.errors));
+  assert.deepEqual(r.derived.r, { x: 2.5, y: 2.8 });
+  assert.equal(r.derived.rLength, Math.hypot(2.5, 2.8));
+  assert.equal(r.derived.rDirection.degrees.toFixed(2), '48.24');
+  assert.equal(r.document.unit, 'dimensionless');
+  assert.equal(r.checks.physics, 'not_applicable');
+
+  const u = authoring.updateScene({
+    document: clone(r.document),
+    operations: [{ op: 'set-b', value: { x: -1, y: 0.5 } }],
+  });
+  assert.ok(u.ok, JSON.stringify(u.errors));
+  assert.deepEqual(u.derived.r, { x: 1, y: 1.5 });
+  assert.equal(u.document.instanceId, r.document.instanceId);
+
+  const back = authoring.validateScene({ document: JSON.parse(JSON.stringify(u.document)) });
+  assert.ok(back.ok);
+  assert.equal(back.documentHash, u.documentHash);
+
+  const s = authoring.renderScene({ document: clone(u.document) });
+  assert.ok(s.ok);
+  assert.ok(s.svg.length > 0);
+  for (const frag of ['pv-role-input', 'pv-role-guide', 'pv-role-derived', 'pv-state-readonly', 'pv-seg', 'pv-dot']) {
+    assert.ok(s.svg.includes(frag), `svg contains ${frag}`);
+  }
+  for (const text of ['>A<', '>B<', '>B′<', '>R<', '>O<']) {
+    assert.ok(s.svg.includes(text), `svg contains label ${text}`);
+  }
+});
+
+test('vector-add: labels override and set-labels merges (keeps unset keys)', () => {
+  const r = authoring.createScene({
+    templateId: 'vector-add', templateVersion: 1,
+    params: { a: { x: 1, y: 0 }, b: { x: 0, y: 1 }, labels: { a: 'α', b: 'β', r: 'ρ' } },
+  });
+  assert.ok(r.ok);
+  const u = authoring.updateScene({
+    document: clone(r.document),
+    operations: [{ op: 'set-labels', value: { a: 'α2' } }],
+  });
+  assert.ok(u.ok, JSON.stringify(u.errors));
+  assert.deepEqual(u.document.params.labels, { a: 'α2', b: 'β', r: 'ρ' }, 'b/r labels preserved');
+  const s = authoring.renderScene({ document: clone(u.document) });
+  for (const text of ['>α2<', '>β<', '>ρ<']) assert.ok(s.svg.includes(text), text);
+  // label-less doc: set-labels {a} leaves b/r defaults visible
+  const r2 = authoring.createScene(clone(CREATE_ADD));
+  const u2 = authoring.updateScene({
+    document: clone(r2.document),
+    operations: [{ op: 'set-labels', value: { a: 'α' } }],
+  });
+  assert.ok(u2.ok);
+  assert.deepEqual(u2.document.params.labels, { a: 'α' });
+  const s2 = authoring.renderScene({ document: clone(u2.document) });
+  for (const text of ['>α<', '>B<', '>R<']) assert.ok(s2.svg.includes(text), text);
+});
+
+test('vector-add: derived fields are readonly with capability-generic hint', () => {
+  const doc = authoring.createScene(clone(CREATE_ADD)).document;
+  for (const op of ['set-r', 'set-rLength', 'set-rDirection']) {
+    const u = authoring.updateScene({ document: clone(doc), operations: [{ op, value: { x: 0, y: 0 } }] });
+    assert.equal(u.ok, false, op);
+    assert.equal(u.errors[0].code, 'readonly-field');
+    assert.ok(!/start|end/.test(u.errors[0].hint ?? ''), `${op} hint must not mention start/end`);
+  }
+});
+
+test('vector-add: degenerate sums still render', () => {
+  const cases = [
+    { a: { x: 1, y: 1 }, b: { x: -1, y: -1 } },   // r = 0 → zero marker
+    { a: { x: 0, y: 0 }, b: { x: 0, y: 0 } },     // everything at origin
+    { a: { x: 0, y: 0 }, b: { x: 1, y: 2 } },     // a is zero vector
+  ];
+  for (const params of cases) {
+    const c = authoring.createScene({ templateId: 'vector-add', templateVersion: 1, params });
+    assert.ok(c.ok, JSON.stringify(c.errors));
+    const s = authoring.renderScene({ document: c.document });
+    assert.ok(s.ok, JSON.stringify(params));
+    assert.ok(s.svg.length > 0);
+  }
+  const zero = authoring.createScene({ templateId: 'vector-add', templateVersion: 1, params: cases[0] });
+  assert.equal(zero.derived.rLength, 0);
+  assert.equal(zero.derived.rDirection, null);
+  assert.match(authoring.renderScene({ document: zero.document }).svg, /pv-zero/);
+});
+
+test('vector-decompose: create/derive/update/validate/render happy path', () => {
+  const r = authoring.createScene(clone(CREATE_DEC));
+  assert.ok(r.ok, JSON.stringify(r.errors));
+  assert.deepEqual(r.derived.vx, { x: 2.4, y: 0 });
+  assert.deepEqual(r.derived.vy, { x: 0, y: 1.6 });
+  assert.equal(r.derived.length, Math.hypot(2.4, 1.6));
+  assert.equal(r.derived.direction.degrees.toFixed(2), '33.69');
+  assert.equal(r.document.params.label, 'V', 'defaults.label applied');
+
+  const u = authoring.updateScene({
+    document: clone(r.document),
+    operations: [{ op: 'set-v', value: { x: -1.5, y: 2 } }, { op: 'set-label', value: 'F' }],
+  });
+  assert.ok(u.ok, JSON.stringify(u.errors));
+  assert.deepEqual(u.derived.vx, { x: -1.5, y: 0 });
+  assert.deepEqual(u.derived.vy, { x: 0, y: 2 });
+  assert.equal(u.document.params.label, 'F');
+
+  const s = authoring.renderScene({ document: clone(u.document) });
+  assert.ok(s.ok);
+  for (const text of ['>F<', '>Vx<', '>Vy<', '>O<']) {
+    assert.ok(s.svg.includes(text), `svg contains ${text}`);
+  }
+});
+
+test('vector-decompose: vx/vy/length/direction are readonly', () => {
+  const doc = authoring.createScene(clone(CREATE_DEC)).document;
+  const u = authoring.updateScene({ document: clone(doc), operations: [{ op: 'set-vx', value: { x: 0, y: 0 } }] });
+  assert.equal(u.ok, false);
+  assert.equal(u.errors[0].code, 'readonly-field');
+  assert.ok(!/start|end/.test(u.errors[0].hint ?? ''));
+});
+
+test('vector-decompose: on-axis and zero vectors still render', () => {
+  for (const v of [{ x: 3, y: 0 }, { x: 0, y: -2 }, { x: 0, y: 0 }]) {
+    const c = authoring.createScene({ templateId: 'vector-decompose', templateVersion: 1, params: { v } });
+    assert.ok(c.ok, JSON.stringify(c.errors));
+    const s = authoring.renderScene({ document: c.document });
+    assert.ok(s.ok, JSON.stringify(v));
+    assert.ok(s.svg.length > 0);
+  }
+  const zero = authoring.createScene({ templateId: 'vector-decompose', templateVersion: 1, params: { v: { x: 0, y: 0 } } });
+  assert.equal(zero.derived.direction, null);
+  assert.match(authoring.renderScene({ document: zero.document }).svg, /pv-zero/);
+});
+
+test('new capabilities describe: schemas and examples are runnable', () => {
+  for (const id of ['vector-add', 'vector-decompose']) {
+    const d = authoring.describeCapability({ id, version: 1 });
+    assert.ok(d.ok, id);
+    const c = d.capability;
+    assert.equal(c.paramsJsonSchema.type, 'object');
+    assert.equal(c.paramsJsonSchema.additionalProperties, false);
+    const opNames = c.operationsJsonSchema.items.oneOf.map((s) => s.properties.op.const);
+    assert.deepEqual(opNames, c.operations, `${id}: every declared op has a schema`);
+    // examples are real: minimal passes create, variant is a runnable update,
+    // failure hits its declared code
+    assert.ok(authoring.createScene(clone(c.examples.minimal)).ok, `${id} minimal`);
+    const uv = authoring.updateScene(clone(c.examples.variant));
+    assert.ok(uv.ok, `${id} variant: ${JSON.stringify(uv.errors)}`);
+    const f = authoring.createScene(clone(c.examples.failure.request));
+    assert.equal(f.ok, false);
+    assert.equal(f.errors[0].code, c.examples.failure.expectedCode);
+  }
+  const add = authoring.describeCapability({ id: 'vector-add', version: 1 }).capability;
+  assert.deepEqual(add.paramsJsonSchema.required, ['a', 'b']);
+  assert.equal(add.operationsJsonSchema.items.oneOf.length, 6);
+  const dec = authoring.describeCapability({ id: 'vector-decompose', version: 1 }).capability;
+  assert.deepEqual(dec.paramsJsonSchema.required, ['v']);
+  assert.equal(dec.operationsJsonSchema.items.oneOf.length, 5);
 });
 
 // ---- import graph purity --------------------------------------------------------

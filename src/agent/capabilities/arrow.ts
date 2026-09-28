@@ -4,15 +4,8 @@ import { magnitude, sub } from '../../math/vec2.js';
 import type { Vec2 } from '../../math/vec2.js';
 import type { SceneItem } from '../../render/scene.js';
 import type { CapabilityDefinition, SceneDocument } from '../types.js';
-
-// Arrow params are the arrow's own mathematical bound — deliberately wider than
-// the M1 drag range ([-4,4]) which only limited interactive editing.
-const ARROW_COORD_BOUND = 1e6;
-const coordinate = v.pipe(v.number(), v.finite(),
-  v.minValue(-ARROW_COORD_BOUND), v.maxValue(ARROW_COORD_BOUND));
-const pointSchema = v.strictObject({ x: coordinate, y: coordinate });
-const labelSchema = v.pipe(v.string(), v.maxLength(200),
-  v.check((s) => !/[\x00-\x1f]/.test(s), 'label must not contain control characters'));
+import { axesRange } from './axes.js';
+import { labelSchema, labelStyle, pointSchema } from './fields.js';
 
 const paramsSchema = v.strictObject({
   start: pointSchema,
@@ -35,35 +28,6 @@ function derive(params: Record<string, unknown>): Record<string, unknown> {
   return { delta, length, direction } satisfies Record<string, unknown>;
 }
 
-/** Nice round tick spacing ≈ one per 60–140 world-unit window subdivisions. */
-function tickFor(span: number): number {
-  const rough = span / 6;
-  const mag = 10 ** Math.floor(Math.log10(rough));
-  for (const m of [1, 2, 5, 10]) if (mag * m >= rough) return mag * m;
-  return mag * 10;
-}
-
-interface AxesRange { minX: number; maxX: number; minY: number; maxY: number; tick: number }
-
-/** Axes run a bit past the content: positive ends pad to the next whole tick
-    plus a half unit so the arrow tip never sits on an axis head or grid corner. */
-function axesRange(p: ArrowParams): AxesRange {
-  const minX = Math.min(p.start.x, p.end.x, 0);
-  const maxX = Math.max(p.start.x, p.end.x, 0);
-  const minY = Math.min(p.start.y, p.end.y, 0);
-  const maxY = Math.max(p.start.y, p.end.y, 0);
-  // a fully degenerate span still needs a real tick spacing
-  const tick = tickFor(Math.max(maxX - minX, maxY - minY, 1));
-  const padHi = (val: number) => Math.floor(val / tick) * tick + tick + 0.5;
-  return {
-    minX: Math.floor(minX / tick) * tick,
-    maxX: padHi(maxX),
-    minY: Math.floor(minY / tick) * tick,
-    maxY: padHi(maxY),
-    tick,
-  };
-}
-
 function scene(
   params: Record<string, unknown>,
   _derived: Record<string, unknown>,
@@ -71,15 +35,12 @@ function scene(
 ): SceneItem[] {
   const p = params as unknown as ArrowParams;
   const label = p.label ?? '向量';
-  const { minX, maxX, minY, maxY, tick } = axesRange(p);
+  const { minX, maxX, minY, maxY, tick } = axesRange([p.start, p.end]);
   const items: SceneItem[] = [
     { kind: 'axes', id: 'ax', x: [minX, maxX], y: [minY, maxY], tick, grid: true },
     {
       kind: 'arrow', id: 'v', role: 'input', from: p.start, to: p.end,
-      label: {
-        text: label, anchor: 'mid',
-        style: /^[A-Za-z][A-Za-z′']{0,3}$/.test(label) ? 'variable' : 'text',
-      },
+      label: { text: label, anchor: 'mid', style: labelStyle(label) },
     },
   ];
   return items;
@@ -87,7 +48,7 @@ function scene(
 
 function fitPoints(params: Record<string, unknown>): Vec2[] {
   const p = params as unknown as ArrowParams;
-  const r = axesRange(p);
+  const r = axesRange([p.start, p.end]);
   return [
     p.start, p.end, { x: 0, y: 0 },
     { x: r.minX, y: r.minY }, { x: r.maxX, y: r.maxY },

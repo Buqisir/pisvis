@@ -1,0 +1,9 @@
+{
+  "request": {
+    "templateId": "vector-decompose",
+    "templateVersion": 1,
+    "params": {}
+  },
+  "expectedCode": "missing-field",
+  "fix": "补上 params.v，例如 {x: 2.4, y: 1.6}；用 describe 查看完整 params Schema"
+}

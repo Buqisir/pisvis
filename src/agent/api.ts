@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { toJsonSchema } from '@valibot/to-json-schema';
 import { fitViewport } from '../core/fit.js';
 import type { Viewport } from '../core/viewport.js';
 import type { Vec2 } from '../math/vec2.js';
@@ -319,7 +320,7 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       return failure([err('invalid-type', 'document.params',
         `参数计算失败：${e instanceof Error ? e.message : String(e)}`)], 'passed', 'failed');
     }
-    if (derived['length'] === 0) warnings = ['端点重合：这是零向量，方向未定义（图中以零向量标记显示）'];
+    if (derived['length'] === 0) warnings = ['零向量：方向未定义（图中以零向量标记显示）'];
     return {
       ok: true,
       capability: { id: cap.id, version: cap.version },
@@ -391,7 +392,7 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       if ('fail' in res) return res.fail;
       const cap = res.cap;
       if (!isPlainObject(req.params)) {
-        return failure([err('missing-field', 'params', '缺少 params（至少提供 start 与 end）')], 'failed');
+        return failure([err('missing-field', 'params', '缺少 params（必填字段见 describe 返回的 paramsJsonSchema）')], 'failed');
       }
       const pParams = parse(cap.paramsSchema as GenericSchema, req.params);
       if (!pParams.ok) {
@@ -471,7 +472,7 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
         const suffix = name.startsWith('set-') ? name.slice(4) : name;
         if (cap.derivedFields.includes(suffix)) {
           errors.push(err('readonly-field', `${opPath}.op`, `「${suffix}」是派生量，不能直接修改`, {
-            hint: '长度/方向由起点和终点派生，请修改 start/end',
+            hint: '该字段由输入参数派生；可写参数与可用操作见 describe 返回的 writable/operations',
           }));
           continue;
         }
@@ -489,8 +490,13 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
         const writableField = cap.writable.includes(suffix) && suffix in entries ? suffix : null;
         switch (true) {
           case writableField !== null:
-            apply(entries[writableField] as GenericSchema,
-              (v0) => { candidate.params[writableField as string] = v0; });
+            apply(entries[writableField] as GenericSchema, (v0) => {
+              const prev = candidate.params[writableField as string];
+              // object params are patched field-wise: set-labels {a} keeps b/r;
+              // scalar params and full objects (e.g. points) still validate whole
+              candidate.params[writableField as string] =
+                isPlainObject(prev) && isPlainObject(v0) ? { ...prev, ...v0 } : v0;
+            });
             break;
           case name === 'set-theme': {
             const r = parse(themeRefSchema as unknown as GenericSchema, raw.value);
@@ -601,16 +607,30 @@ function operationsJsonSchema(cap: CapabilityDefinition): Record<string, unknown
     type: 'object', additionalProperties: false, required: ['op', 'value'],
     properties: { op: { const: op }, value },
   });
-  const opSchemas: Record<string, ReturnType<typeof shape>> = {
-    'set-start': shape('set-start', point),
-    'set-end': shape('set-end', point),
-    'set-label': shape('set-label', { type: 'string', maxLength: 200 }),
-    'set-theme': shape('set-theme', { type: 'object', additionalProperties: false, required: ['id', 'version'], properties: { id: { type: 'string' }, version: { type: 'integer', minimum: 1 } } }),
-    'set-canvas': shape('set-canvas', { type: 'object', additionalProperties: false, required: ['width', 'height'], properties: { width: { type: 'integer', minimum: CANVAS_MIN, maximum: CANVAS_MAX }, height: { type: 'integer', minimum: CANVAS_MIN, maximum: CANVAS_MAX } } }),
-    'set-viewport': shape('set-viewport', viewportJsonSchema()),
+  const valueSchemas: Record<string, Record<string, unknown>> = {
+    'set-start': point,
+    'set-end': point,
+    'set-label': { type: 'string', maxLength: 200 },
+    'set-theme': { type: 'object', additionalProperties: false, required: ['id', 'version'], properties: { id: { type: 'string' }, version: { type: 'integer', minimum: 1 } } },
+    'set-canvas': { type: 'object', additionalProperties: false, required: ['width', 'height'], properties: { width: { type: 'integer', minimum: CANVAS_MIN, maximum: CANVAS_MAX }, height: { type: 'integer', minimum: CANVAS_MIN, maximum: CANVAS_MAX } } },
+    'set-viewport': viewportJsonSchema(),
   };
+  const entries = (cap.paramsSchema as { entries?: Record<string, unknown> }).entries ?? {};
   const items = cap.operations
-    .map((op) => opSchemas[op])
+    .map((op) => {
+      let value = valueSchemas[op];
+      if (value === undefined && op.startsWith('set-')) {
+        // set-<writable param> not listed above: derive the value schema from
+        // the capability's own params schema slice — no per-op hand wiring
+        const field = op.slice(4);
+        if (cap.writable.includes(field) && field in entries) {
+          const gen = toJsonSchema(entries[field] as v.GenericSchema, { errorMode: 'ignore' }) as Record<string, unknown>;
+          const { $schema: _drop, ...rest } = gen;
+          value = rest;
+        }
+      }
+      return value === undefined ? undefined : shape(op, value);
+    })
     .filter((s): s is ReturnType<typeof shape> => s !== undefined);
   return { type: 'array', items: { oneOf: items } };
 }

@@ -1,0 +1,14 @@
+{
+  "templateId": "vector-add",
+  "templateVersion": 1,
+  "params": {
+    "a": {
+      "x": 2,
+      "y": 1
+    },
+    "b": {
+      "x": 0.5,
+      "y": 1.8
+    }
+  }
+}

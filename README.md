@@ -32,8 +32,8 @@ M2 视觉样板（PR #7）已合并；M2 其余部分在 A1 契约之后接入�
 | 自己计算箭杆与箭头几何 | 支持短箭头/重合端点，不自动判断真实物理力 |
 | 纯函数输出 SVG 字符串 | 无 DOM 依赖，文字转义，不接受任意 SVG/HTML |
 | 实验页：坐标输入、缩放滑块、两端点原生拖动 | 演示层能力，非库 API；无模板保存或自动标签排版 |
-| 类型检查、库编译、30 个 Node 测试、Chromium 浏览器测试 | Firefox/WebKit 与真实触摸设备尚未验收 |
-| Agent 创作 API、CLI 与 MCP（./agent + pisvis + pisvis-mcp） | 仅箭头能力 arrow@1；冷启动消费评测待收尾 |
+| 类型检查、库编译、103 个 Node 测试、Chromium 浏览器测试 | Firefox/WebKit 与真实触摸设备尚未验收 |
+| Agent 创作 API、CLI 与 MCP（./agent + pisvis + pisvis-mcp） | 已注册 arrow@1 / vector-add@1 / vector-decompose@1 三个 math-diagram 能力；冷启动消费评测待收尾 |
 | 实验页经同一 API 编辑场景文档 | 演示层拖动夹限 x∈[-4,4]/y∈[-2,2] 是 UI 约束，非能力边界 |
 
 依赖完整安装、真实锁文件（npm ci）、Vite 构建与 Chromium 交互验收已在 M1 完成。
