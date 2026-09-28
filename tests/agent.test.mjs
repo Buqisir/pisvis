@@ -276,17 +276,21 @@ function importGraph(entry) {
   return bare;
 }
 
-test('root entry stays zero-dependency: no valibot, no node:', () => {
+test('root entry stays zero-dependency: no valibot, no node:, no MCP', () => {
   const bare = importGraph(join(ROOT, 'dist/index.js'));
   for (const spec of bare) {
     assert.ok(!spec.includes('valibot'), `root imports ${spec}`);
     assert.ok(!spec.startsWith('node:'), `root imports ${spec}`);
+    assert.ok(!spec.includes('modelcontextprotocol'), `root imports ${spec}`);
   }
 });
 
-test('./agent entry has no node: imports (browser-usable)', async () => {
+test('./agent entry has no node: imports and no MCP (browser-usable)', async () => {
   const bare = importGraph(join(ROOT, 'dist/agent.js'));
-  for (const spec of bare) assert.ok(!spec.startsWith('node:'), spec);
+  for (const spec of bare) {
+    assert.ok(!spec.startsWith('node:'), spec);
+    assert.ok(!spec.includes('modelcontextprotocol'), `agent imports ${spec}`);
+  }
   const mod = await import('../dist/agent.js');
   assert.equal(typeof mod.authoring.createScene, 'function');
 });

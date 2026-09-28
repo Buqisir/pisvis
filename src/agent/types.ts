@@ -26,12 +26,14 @@ export interface SceneOperation {
 
 // ---- results ----------------------------------------------------------------
 
-export type ErrorCode =
-  | 'missing-field' | 'unknown-field' | 'invalid-type' | 'non-finite'
-  | 'out-of-range' | 'label-too-long' | 'unknown-capability' | 'unknown-version'
-  | 'unknown-theme' | 'unsupported-schema-version' | 'unit-mismatch'
-  | 'readonly-field' | 'invalid-operation' | 'too-large' | 'too-deep'
-  | 'invalid-json' | 'render-failed' | 'usage-error' | 'io-error';
+export const ERROR_CODES = [
+  'missing-field', 'unknown-field', 'invalid-type', 'non-finite',
+  'out-of-range', 'label-too-long', 'unknown-capability', 'unknown-version',
+  'unknown-theme', 'unsupported-schema-version', 'unit-mismatch',
+  'readonly-field', 'invalid-operation', 'too-large', 'too-deep',
+  'invalid-json', 'render-failed', 'usage-error', 'io-error',
+] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export interface ApiError {
   readonly code: ErrorCode;

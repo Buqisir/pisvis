@@ -22,8 +22,10 @@
 
 执行 [Issue #6](https://github.com/Buqisir/pisvis/issues/6)，依赖 M1 验收。
 能力注册表 → 纯数据创作 API（./agent）→ CLI →（后续 PR）MCP stdio 与消费 Skill。
-A1-1 已交付箭头能力的发现/描述/创建/校验/更新/渲染与独立样式 SVG；
-MCP、Skill 升级、冷启动消费评测按 Issue 内顺序继续。
+A1-1 交付注册表/API/CLI/独立 SVG（PR #8 merged）；A1-2 交付 MCP stdio 服务器
+（六个 pisvis_* 工具 1:1 于 API）、消费者 Skill（references+examples 生成，
+agent-docs:check 防漂移）、npm 包完整性验收（npm pack 外部消费测试）。
+PR 3：冷启动消费评测与 playground 接入 API。
 
 ## M2：统一视觉 + 数学模板复用
 

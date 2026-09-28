@@ -16,8 +16,7 @@
     "src/**/*.ts"
   ],
   "exclude": [
-    "playground",
-    "tests",
-    "src/cli"
+    "src/cli",
+    "src/mcp"
   ]
 }

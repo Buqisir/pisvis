@@ -1,0 +1,14 @@
+{
+  "request": {
+    "templateId": "arrow",
+    "templateVersion": 1,
+    "params": {
+      "start": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  "expectedCode": "missing-field",
+  "fix": "补上 params.end，例如 {x: 3, y: 4}；用 describe 查看完整 params Schema"
+}

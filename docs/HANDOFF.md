@@ -238,3 +238,32 @@ A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
   JSON 产物文件补换行符。新增 stdin 超限、覆盖失败回滚、标签-箭杆间距断言。
 - 未做（Issue #6 后续 PR）：MCP stdio 适配、消费 Skill 升级、冷启动消费评测、npm pack
   仓库外消费测试、Signals（按 Issue 决定推迟）。
+
+## H. A1-2 MCP 与 Skill 记录
+
+环境：Node 24.15.0 / npm 11.12.1 / TS 6.0.3 / SDK server+client 2.0.0 / Playwright 1.63.0。提交 <commit>。
+
+- 依赖（decisions/0002-mcp-sdk.md）：`@modelcontextprotocol/server@2.0.0`（runtime，MIT，2026-07-27；
+  2.1.0 发布仅 5 天被 7 天规则弃用）+ `@modelcontextprotocol/client@2.0.0`（dev，测试）。
+  server 传递依赖 core@2.0.0 + zod@4.6.5（2 个）；client 链共 11 个，仅测试安装。
+- 工具注册路径：`McpServer.registerTool` + `toStandardJsonSchema`（valibot Standard Schema，
+  `~standard.validate`+`~standard.jsonSchema` 两个接口都满足）——**业务 Schema 不写 zod**；
+  SDK 的 zod 是它自己的内部校验依赖。协商协议：客户端请求 2025-11-25 → 2025-11-25。
+- 六个工具 1:1 于 API：`pisvis_list/describe/create/validate/update/render`；
+  `structuredContent` = API 结果信封（与 CLI stdout 同构）；领域失败 isError:true + 同构错误；
+  render 的 SVG ≤64 KiB 内联为 text content，超出返回 too-large；无状态、无资源、无文件系统。
+- 测试：tests/mcp.test.mjs 5 项（真实 stdio 握手+全流程+错误码+stdout 纯净+测试注册表经 MCP 通过，
+  结果与直接 API 深相等）。import-graph 断言根/./agent 不含 MCP。
+- 消费 Skill：skills/pisvis-authoring 重写为消费者文档（工作流八步 + 检查语义 + 错误处理）；
+  references/{cli,mcp,errors,document}.md；assets/examples 从注册表生成；
+  scripts/agent-docs.mjs --write/--check 防漂移（接入 npm run check），镜像到 .agents/skills/
+  （gitignored，仅本地宿主发现便利，不动全局配置）。docs/agent/README.md + llms.txt +
+  mcp.example.json。
+- 包完整性：files=dist+skills+llms.txt+docs+README+LICENSE+AGENTS.md；bin 加 pisvis-mcp。
+  scripts/pack-test.mjs：npm pack→临时目录消费项目（路径含空格）→npx pisvis / npx pisvis-mcp
+  官方 client 握手/pisvis/agent import/Skill 文件存在/包内相对链接全解析。
+  tarball 83 kB / 71 文件 / unpacked 223 kB。接入 CI（check 后）。
+- 验证：npm ci 干净；npm run check 94 通过；npm run test:browser 40 通过；npm run test:pack 通过。
+- 未做（PR 3）：冷启动消费评测、playground 经 API 创建/编辑场景、Issue §2 文档同步收尾。
+- 注意：SDK 2.0.0 的 DEFAULT_NEGOTIATED_PROTOCOL_VERSION 常量显示 2025-03-26（历史兼容默认），
+  实测协商 2025-11-25。npx/.bin 经符号链接运行 → isMain 用 realpathSync(argv[1]) 对比模块路径。
