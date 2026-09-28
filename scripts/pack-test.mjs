@@ -37,6 +37,7 @@ try {
     'skills/pisvis-authoring/references/errors.md', 'skills/pisvis-authoring/references/document.md',
     'skills/pisvis-authoring/assets/examples/arrow-create-minimal.json',
     'skills/pisvis-authoring/assets/examples/horizontal-projectile-create-minimal.json',
+    'skills/pisvis-authoring/assets/examples/projectile-speed-graph-create-minimal.json',
     'skills/pisvis-authoring/assets/examples/vector-add-create-minimal.json',
     'skills/pisvis-authoring/assets/examples/vector-decompose-create-minimal.json',
     'llms.txt', 'docs/agent/README.md', 'docs/agent/mcp.example.json', 'README.md', 'LICENSE',
@@ -47,9 +48,10 @@ try {
   // 4. bins: CLI
   const cli = run('npx', ['pisvis', 'capabilities'], { cwd: consumer });
   const caps = JSON.parse(cli.slice(cli.indexOf('{')));
-  if (caps.total !== 4 || caps.items[0].id !== 'arrow' ||
+  if (caps.total !== 5 || caps.items[0].id !== 'arrow' ||
       caps.items[1].id !== 'horizontal-projectile' ||
-      caps.items[2].id !== 'vector-add' || caps.items[3].id !== 'vector-decompose') {
+      caps.items[2].id !== 'projectile-speed-graph' ||
+      caps.items[3].id !== 'vector-add' || caps.items[4].id !== 'vector-decompose') {
     fail('npx pisvis capabilities wrong');
   }
 

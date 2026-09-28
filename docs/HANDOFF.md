@@ -444,3 +444,101 @@ Playwright 1.63.0（Chromium）。分支 `m3-projectile`，提交 d8c48d4。
   u=0 且 t=0 速度零 → alphaDeg）——调用方需判空，describe 已注明。
 - 唯一优先下一步：Issue #4 时间维度（播放/暂停/时间滑块 + 控制器
   生命周期），届时按 DEPENDENCIES 决策是否引入 Motion/KaTeX。
+
+## L. M3 题型切片：实例/会话、v-t 视图、公式与动效适配
+
+环境：macOS 本机；仓库约定 Node 24.15.0 / npm 11.12.1 / TS 6.0.3 /
+Playwright 1.63.0（Chromium）。分支 `m3-questions`，基于 m3-projectile
+基线 3fd68ef；四个隔离 worktree 并行实现后经集成提交合入：
+3bb688e/9e5e6c9（questions）、0bd56f6（graph）、ee1f0aa（formula）、
+328136f（motion）、0adc733（deps），集成提交 95db6b8、0599ca4、
+a51c50a、45154dd。
+
+实现 [Issue #4](https://github.com/Buqisir/pisvis/issues/4) 主体：
+题型实例—会话分离 + 第二视图 v-t 图 + 受控 KaTeX 公式 + 受控 Motion
+讲解动效 + 双面板演示页。
+
+### 实现要点
+
+- `src/questions/`：3 个深冻结原创实例（q-landing-time h45/u10 → T=3,
+  R=30；q-range h20/u15 → T=2, R=30；q-velocity-decompose h20/u10/t1 →
+  v=(10,−10)），各带教学目标与中文教学步骤；步骤为结构化
+  `TeachingStep{text, cue?}`，cue 可绑时刻 t、注册公式 id 与聚焦区域
+  （scene/graph/formula/conditions）。`editableParams=['h','u','g']`
+  （t 不是题设条件）。`session.ts` 以 WeakMap 持有内部状态：
+  createSession（可覆盖 instanceId 做同题多实例隔离）、sessionSetTime、
+  sessionUpdateParams、sessionApply（通用 op 通道，与参数更新走同一
+  mutate 边界）、sessionRestoreOriginal、sessionDestroy。改 h/u/g
+  触发 original→explore；仅改 t 或 set-theme 不改模式；失败更新保留
+  上一份有效文档；销毁后变更返回结构化 destroyed 错误。
+- `src/agent/capabilities/projectile-speed-graph.ts`：第 5 能力
+  `projectile-speed-graph@1`（physics-model），与 horizontal-projectile
+  共享同一 params schema（t≤T 跨字段校验）；派生 T/vx/vy；渲染
+  vx 常值线、vy=−gt 线、当前时刻游标（零长时省略）与两点。
+  axes 图元新增 `xName`/`yName`/`xTick`/`yTick`（只用 `tick` 的旧调用
+  输出字节不变）；`src/core/fit.ts`/`viewport.ts` 新增 `stretch`
+  视口模式（x/y 各向异性缩放——函数图屏幕长度不再当物理长度）。
+- `src/formula/`：受控 KaTeX 适配层。10 个注册公式（x-t、y-t、vx、
+  vy、speed、T、R、landing-speed、traj、tan-alpha），
+  renderFormula/renderAll/listFormulas；数值必须全部有限，traj 与
+  tan-alpha 在 u=0 时显式 not-applicable；`throwOnError:true,
+  trust:false, strict:'warn', output:'html'`；用户/Agent 文本不进入
+  TeX（数值替换由代码生成）；错误结构化（unknown-formula/bad-value/
+  not-applicable/formula-render）。
+- `src/motion/`：`motion/mini` 薄适配层。固定教学序列三步（scene
+  淡入位移 → vectors 强调 → panels 揭示），仅容器级 opacity/x/y/scale，
+  时长均 <1s，纯 tween；cancel() 施加终态并 resolve；reducedMotion
+  同步落终态；Node/SSR 无 DOM 安全导入。物理几何与时间不经动效。
+- `projectile.html`/`playground/projectile.ts`：两个完全隔离的题板
+  （各自 session + v-t 图文档 + 播放时钟 + 讲解态）；题目下拉、
+  原题徽标/修改条件/恢复原题、t 滑块、播放/速率/主题、公式网格、
+  页面级减少动效勾选（初始读系统偏好）；后台隐藏暂停按墙钟续播不跳帧；
+  `__pvPanels` 调试快照供浏览器测试复核。
+- 逐步讲解：「讲解演示」进入 guide 模式——入场仍是容器级三拍铺场，
+  之后「上一步/下一步/结束」逐条走 TeachingStep：当前步高亮、计数
+  i/N、cue.t 经会话边界驱动全视图跳时刻、cue.formula 点亮公式项、
+  cue.focus 圈出相关区域；结束清空全部装饰。减少动效下 cue 语义不变
+  （跳时刻/点亮不是动效，照常即时生效）。
+- 依赖：katex@0.18.7 + motion@13.4.0 + @types/katex@0.16.8（发布龄
+  22/12 天，满足 ≥7 天规则）；决策记录 docs/decisions/0003-katex.md、
+  0004-motion.md；katex 传递依赖 commander 仅 CLI 使用，运行时
+  katex.mjs 不引用。入口边界测试：root/agent dist 无 katex/motion/node:
+  导入，公式隔离在 dist/formula。
+- 注册表 5 能力：arrow < horizontal-projectile <
+  projectile-speed-graph < vector-add < vector-decompose；tests/cli/
+  pack 计数与 llms.txt、docs/agent/README.md（physics checks 描述
+  修正：数学图 not_applicable、physics-model 可 passed）同步；
+  agent-docs 生成 projectile-speed-graph 三份 examples。
+
+### 验证
+
+- `npm run check`：typecheck 通过；`node --test` 147 通过（含
+  questions 10、speed-graph 9、formula 12、motion 7 与既有回归）；
+  `agent-docs:check` 无漂移。
+- `npm run build:demo` 通过：KaTeX 字体内置打包；projectile chunk
+  288.35 kB（gzip 88.17 kB，含 katex+motion/mini）。
+- `npm run test:browser` 51 通过（Chromium；projectile spec 7 条：
+  双面板隔离/文档独立、滑块联动场景+读数+游标、播放精确停 T、切题
+  重建会话、公式随 t 重渲染与 u=0 前提降级、逐步讲解 cue 驱动
+  （跳 t/点亮公式/聚焦区域/退出清装饰）、减少动效下 cue 即时生效与
+  切题退出、live 文档经 authoring 边界复核）。Firefox/WebKit **未跑**。
+- `npm run test:pack` 通过（tarball 125.9 kB / 115 文件；新增
+  dist/questions、dist/formula、dist/motion 与 graph examples 入包；
+  pisvis/questions 导出可消费）。
+- 人工目检：双面板全页截图——公式面板 10 式排版与代入数值正确、
+  v-t 图 stretch 后可读、端点标签（vx/vy 与时刻点）经内推偏移不贴边。
+
+### 已知限制 / 唯一优先下一步
+
+- 逐步讲解按实例自带 TeachingStep 逐条走（cue 绑 t/公式/区域），入场
+  三拍仅为铺场；减少动效只影响铺场与容器强调，cue 语义照常生效
+  （符合设计：物理时间解析推进，高亮是状态不是动画）。
+- 多实例经 instanceId 支持，页面实测 2 块题板；>2 未测。SVG id 隔离
+  由 instanceId 保证，同名题例并发由会话隔离保证。
+- v-t 图仅 vx/vy 两条曲线（无 |v| 合速度曲线）；图标签为固定偏移，
+  仅对两套题参数实测，极端 h/u 比例未遍历。
+- 播放时公式面板逐帧 replaceChildren 重渲染（10×KaTeX/帧）：当前规模
+  无卡顿，未做 diff/缓存优化。
+- 唯一优先下一步：Issue #4 收尾——PR 评审合并；之后按 ROADMAP 进
+  M4 下一模型（斜抛/圆周待 Issue 指定），或按维护者反馈补键盘可达性
+  与多实例压测。

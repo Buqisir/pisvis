@@ -1,6 +1,6 @@
 import * as v from 'valibot';
 import { toJsonSchema } from '@valibot/to-json-schema';
-import { fitViewport } from '../core/fit.js';
+import { fitViewport, stretchViewport } from '../core/fit.js';
 import type { Viewport } from '../core/viewport.js';
 import type { Vec2 } from '../math/vec2.js';
 import { renderStandaloneSceneSvg } from '../render/standalone.js';
@@ -181,6 +181,7 @@ const viewportSchema = v.union([
     }),
     pixelsPerUnit: v.pipe(v.number(), v.finite(), v.gtValue(0), v.maxValue(MAX_SCALE)),
   }),
+  v.strictObject({ mode: v.literal('stretch') }),
 ]);
 const presentationSchema = v.strictObject({
   theme: themeRefSchema,
@@ -304,9 +305,9 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       presentation: {
         theme: { ...input.presentation.theme },
         canvas: { ...input.presentation.canvas },
-        viewport: input.presentation.viewport.mode === 'fit'
-          ? { mode: 'fit' }
-          : { mode: 'explicit', originPx: { ...input.presentation.viewport.originPx }, pixelsPerUnit: input.presentation.viewport.pixelsPerUnit },
+        viewport: input.presentation.viewport.mode === 'explicit'
+          ? { mode: 'explicit', originPx: { ...input.presentation.viewport.originPx }, pixelsPerUnit: input.presentation.viewport.pixelsPerUnit }
+          : { mode: input.presentation.viewport.mode },
       },
     };
     return { doc, cap };
@@ -318,8 +319,10 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       return { originPx: pres.viewport.originPx, pixelsPerUnit: pres.viewport.pixelsPerUnit };
     }
     const points = cap.fitPoints(doc.params, cap.derive(doc.params)) as Vec2[];
-    return fitViewport(points, pres.canvas.width, pres.canvas.height,
-      getTheme(pres.theme.id, pres.theme.version)!.space.safeMargin);
+    const margin = getTheme(pres.theme.id, pres.theme.version)!.space.safeMargin;
+    return pres.viewport.mode === 'stretch'
+      ? stretchViewport(points, pres.canvas.width, pres.canvas.height, margin)
+      : fitViewport(points, pres.canvas.width, pres.canvas.height, margin);
   }
 
   function successEnvelope(
@@ -598,6 +601,7 @@ function viewportJsonSchema(): Record<string, unknown> {
         originPx: { type: 'object', additionalProperties: false, required: ['x', 'y'], properties: { x: { type: 'number' }, y: { type: 'number' } } },
         pixelsPerUnit: { type: 'number', exclusiveMinimum: 0, maximum: MAX_SCALE },
       } },
+      { type: 'object', additionalProperties: false, required: ['mode'], properties: { mode: { const: 'stretch' } } },
     ],
   };
 }

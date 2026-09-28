@@ -2,8 +2,9 @@
 
 > 教学用的二维数学/物理可视化内核。Agent 通过结构化创作 API（CLI 或 MCP）
 > 生成可复现、可校验的场景文档与自包含 SVG。当前注册能力：arrow@1、
-> vector-add@1、vector-decompose@1（无量纲向量示意）。
-> 不做物理正确性验证，不执行任意代码。
+> vector-add@1、vector-decompose@1（无量纲向量示意）、horizontal-projectile@1
+> 与 projectile-speed-graph@1（SI 平抛情境图与 v–t 函数图，physics-model）。
+> 不做超出已注册模型的物理正确性验证，不执行任意代码。
 
 ## Agent 入口
 

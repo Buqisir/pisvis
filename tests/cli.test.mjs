@@ -39,9 +39,9 @@ test('unknown command exits 2 with a JSON usage-error on stdout', () => {
 
 test('capabilities lists the whole registry in stable order', () => {
   const j = asJson(run(['capabilities']));
-  assert.equal(j.total, 4);
+  assert.equal(j.total, 5);
   assert.deepEqual(j.items.map((i) => i.id),
-    ['arrow', 'horizontal-projectile', 'vector-add', 'vector-decompose']);
+    ['arrow', 'horizontal-projectile', 'projectile-speed-graph', 'vector-add', 'vector-decompose']);
 });
 
 test('create/validate/update via file and via stdin', () => {
