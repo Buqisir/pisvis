@@ -368,3 +368,73 @@ npm run build:demo 通过、npm run test:browser 43 通过、npm run test:pack �
 - vector-add 的 r=0 不触发 warning（warning 只看 `derived['length']===0`，命中的是
   decompose 的字段名）；但 derived 自身已含 `rLength:0`/`rDirection:null`。
 - 唯一优先下一步：本 PR 合并后按 Issue #3 余量做交互与往返验收。提交 6b2759c。
+
+## K. M3 平抛快照能力
+
+环境：macOS 本机；仓库约定 Node 24.15.0 / npm 11.12.1 / TS 6.0.3 /
+Playwright 1.63.0（Chromium）。分支 `m3-projectile`，提交 d8c48d4。
+
+实现 [Issue #4](https://github.com/Buqisir/pisvis/issues/4) 的快照物理模型切片：
+`horizontal-projectile@1`（kind `physics-model`）注册进注册表，参数
+`{h,u,g,t}` 快照驱动轨迹与速度分解渲染。本切片**不含** Issue #4 的
+时间播放、实例化、公式面板与 v-t 图（见下方未验证/限制）。模型卡
+`docs/models/horizontal-projectile.md`（PR #11）为唯一公式来源。
+
+### 实现要点
+
+- `src/models/projectile.ts`：纯模型，无 DOM/网络。x=ut、y=h−g·t²/2、
+  T=√(2h/g)、R=uT、落地速率 √(u²+2gh)、位移/速度角（`atan2` 经 `nz` 归一
+  消除 -0）、轨迹等距采样（端点恰好落在 (R,0)，不低于地面）。`u=0`
+  自由落体退化用 t 参数化（不除以 u），速度反向延长线中点不变量
+  `midpointX = xP/2` 作为派生字段输出。
+- `src/agent/capabilities/horizontal-projectile.ts`：params `{h,u,g,t}`；
+  编辑器范围 h∈(0,100]、u∈[0,40]、g∈[1,20]、t≥0 有限；`t≤T` 是跨字段
+  约束，由 physics 阶段校验，越界返回 `out-of-range`（path
+  `document.params.t`，physics failed / math not_run，无部分提交）。
+  派生 position/velocity/speed/alphaDeg/displacement/thetaDeg/T/R/
+  landingSpeed/midpointX/landed（零向量角度为 null：t=0 时 thetaDeg=null，
+  u=0 且 t=0 时 alphaDeg 也为 null；describe 示例注明判空）。scene()：axes + O（抛出点）+ land
+  （落点）+ traj-done 实线 / traj-todo 虚线两段 path + P 小球 + v 实线
+  箭头 + vx/vy 虚线分量箭头 + ext 虚线速度反向延长线至 xP/2。速度箭头
+  共用显示比例 k=0.34·max(R,h,1)/|v(T)|（k 与 t 无关，等比真实缩放）；
+  与 v 重合的分量箭头不重复绘制（t=0 的 vx、u=0 的 vy 等），零分量以
+  pv-zero 零向量标记显示。
+- `src/render/scene.ts`：SceneItem 新增 `path` 图元（points[]、dashed、
+  label），渲染器输出 `pv-path` class、折线 polyline；label anchor
+  'mid'/'end' 沿中点/末点切向放置。
+- `src/agent/api.ts`：valibot 数值范围 issue（min_value/max_value/
+  gt_value/lt_value）映射由 `invalid-type` 改为 `out-of-range`——
+  范围错误与类型错误在错误码层面分开（behavior 变化，测试已覆盖）。
+- 标签定位无自动避让：对 6 组代表参数（t=1 常态、t=1.8 晚期、u=0、
+  t=0、t=T 边界 × illustrated/linework）用 Chromium getBBox 逐对 text
+  实测至零重叠后固定偏移；t=T 帧所有元素聚于落点，vx 标签取右上折中
+  位（距箭头 ~30px）。
+- 注册表 4 能力：arrow < horizontal-projectile < vector-add <
+  vector-decompose；CLI/MCP 零改动经注册表自动生效；`agent-docs.mjs`
+  自动产出 horizontal-projectile-{create-minimal,update-variant,
+  failure}.json（skills 与 .agents 镜像同步）。
+
+### 验证
+
+- `npm run check`：typecheck 通过；`node --test` 109 通过（103 + 本轮 6：
+  模型卡验收值 h20/u10/g10 全等式、边界 t=0/t=T、u=0 退化、t>T 拒绝与
+  原子更新、h 改后 T 重算、derived 只读）；`agent-docs:check` 无漂移。
+- `npm run build:demo` 通过；`npm run test:browser` 44 通过（43 +
+  agent-artifact 第 4 能力 SVG 断言，含 pv-path 结构检查）。
+- `npm run test:pack` 通过（tarball 104.5 kB / 94 文件；pack 断言更新为
+  capabilities total 4 + 3 个 horizontal-projectile examples）。
+- 人工目检：Chromium 截图 6 组参数（test-results/play/proj*.png），
+  标签零重叠（getBBox 实测）、轨迹 done/todo 分段清晰、落点恰在地面、
+  u=0 为竖直轨迹与 v 竖直向下。Firefox/WebKit **未跑**。
+
+### 已知限制 / 唯一优先下一步
+
+- 本切片只是快照能力：Issue #4 的 ≥3 道题实例、原题/探索分离、播放/
+  暂停/时间滑块、KaTeX 公式面板、vx/vy–t 图、多实例共存、动画控制器
+  生命周期清理、真实拖拽/交互测试、Motion/KaTeX 依赖引入**均未做**。
+- 标签为固定锚点+像素偏移，只对上述 6 组代表参数实测过；参数空间的
+  其余组合（如 h/u 极端比例）可能出现未检测的标签重叠——无自动避让。
+- `alphaDeg`/`thetaDeg` 在对应向量为零时为 null（t=0 位移零 → thetaDeg；
+  u=0 且 t=0 速度零 → alphaDeg）——调用方需判空，describe 已注明。
+- 唯一优先下一步：Issue #4 时间维度（播放/暂停/时间滑块 + 控制器
+  生命周期），届时按 DEPENDENCIES 决策是否引入 Motion/KaTeX。
