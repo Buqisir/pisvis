@@ -106,6 +106,11 @@ function diverged(instance: QuestionInstance, doc: SceneDocument): string[] {
 
 // ---- public API -----------------------------------------------------------------
 
+export interface CreateSessionOptions {
+  /** 覆盖默认 instanceId（默认 instance.id）；同屏多会话同题时用于隔离文档 id。 */
+  readonly instanceId?: string;
+}
+
 /**
  * 用题目实例建会话：经 authoring.createScene 走同一校验边界，
  * 默认表现 illustrated@2、canvas 640×360、viewport fit；起始为原题模式。
@@ -113,12 +118,13 @@ function diverged(instance: QuestionInstance, doc: SceneDocument): string[] {
 export function createSession(
   instance: QuestionInstance,
   api: AuthoringApi = authoring,
+  options?: CreateSessionOptions,
 ): CreateSessionResult {
   const r = api.createScene({
     templateId: instance.templateId,
     templateVersion: instance.templateVersion,
     params: instance.params,
-    instanceId: instance.id,
+    instanceId: options?.instanceId ?? instance.id,
     presentation: {
       theme: { id: 'illustrated', version: 2 },
       canvas: { width: 640, height: 360 },

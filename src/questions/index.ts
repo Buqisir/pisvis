@@ -9,6 +9,7 @@ export {
   sessionUpdateParams,
 } from './session.js';
 export type {
+  CreateSessionOptions,
   CreateSessionResult,
   ProjectileParamPatch,
   QuestionSession,
