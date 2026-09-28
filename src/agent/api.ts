@@ -84,11 +84,16 @@ function err(
   return { code, path, message, ...extra };
 }
 
-function failure(errors: readonly ApiError[], structure: Checks['structure'], math: Checks['math'] = 'not_run'): Failure {
+function failure(
+  errors: readonly ApiError[],
+  structure: Checks['structure'],
+  math: Checks['math'] = 'not_run',
+  physics: Checks['physics'] = 'not_applicable',
+): Failure {
   return {
     ok: false,
     errors,
-    checks: { structure, math, physics: 'not_applicable', visual: 'not_run' },
+    checks: { structure, math, physics, visual: 'not_run' },
   };
 }
 
@@ -134,7 +139,7 @@ function mapIssue(issue: v.GenericIssue, basePath: string): ApiError {
       return err('missing-field', path, `缺少必填字段「${key}」`, { expected: key });
     case 'finite':
       return err('non-finite', path, `数值必须是有限数（收到 ${issue.received}）`, { expected: 'finite' });
-    case 'min_value': case 'max_value':
+    case 'min_value': case 'max_value': case 'gt_value': case 'lt_value':
       return err('out-of-range', path, `数值超出范围（${issue.expected}）`, {
         expected: String(issue.expected),
       });
@@ -187,7 +192,7 @@ const documentSchema = v.strictObject({
   instanceId: idString,
   templateId: idString,
   templateVersion: v.pipe(v.number(), v.integer(), v.minValue(1)),
-  unit: v.literal('dimensionless'),
+  unit: v.union([v.literal('dimensionless'), v.literal('si')]),
   params: v.looseObject({}), // validated per-capability
   presentation: presentationSchema,
 });
@@ -245,9 +250,11 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
           return err('unsupported-schema-version', 'document.schemaVersion',
             `仅支持 schemaVersion 1（收到 ${i.received}）`, { expected: '1' });
         }
-        if (i.type === 'literal' && path === 'unit') {
+        if (path === 'unit') {
           return err('unit-mismatch', 'document.unit',
-            `unit 必须为 'dimensionless'（收到 ${i.received}）`, { expected: 'dimensionless' });
+            `unit 必须是已声明的单位标记（收到 ${i.received}）`, {
+              allowedValues: ['dimensionless', 'si'],
+            });
         }
         return mapIssue(i, 'document');
       });
@@ -258,6 +265,14 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
     if ('fail' in capRes) return capRes;
     const cap = capRes.cap;
 
+    if (input.unit !== cap.unit) {
+      return {
+        fail: failure([err('unit-mismatch', 'document.unit',
+          `能力「${cap.id}@${cap.version}」要求 unit '${cap.unit}'（收到 '${input.unit}'）`, {
+            expected: cap.unit,
+          })], 'failed'),
+      };
+    }
     if (getTheme(input.presentation.theme.id, input.presentation.theme.version) === null) {
       return {
         fail: failure([err('unknown-theme', 'document.presentation.theme',
@@ -284,7 +299,7 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       instanceId: input.instanceId,
       templateId: input.templateId,
       templateVersion: input.templateVersion,
-      unit: 'dimensionless',
+      unit: input.unit,
       params: JSON.parse(JSON.stringify(pParams.output)) as Record<string, unknown>,
       presentation: {
         theme: { ...input.presentation.theme },
@@ -310,6 +325,10 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
   function successEnvelope(
     cap: CapabilityDefinition, doc: SceneDocument, defaultsApplied: readonly string[],
   ): SceneSuccess | Failure {
+    if (cap.physicsCheck !== undefined) {
+      const pErrors = cap.physicsCheck(doc.params);
+      if (pErrors.length > 0) return failure(pErrors, 'passed', 'not_run', 'failed');
+    }
     let derived: Record<string, unknown>;
     let warnings: string[] = [];
     try {
@@ -318,9 +337,11 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       cap.fitPoints(doc.params, derived);
     } catch (e) {
       return failure([err('invalid-type', 'document.params',
-        `参数计算失败：${e instanceof Error ? e.message : String(e)}`)], 'passed', 'failed');
+        `参数计算失败：${e instanceof Error ? e.message : String(e)}`)], 'passed', 'failed',
+        cap.physicsCheck === undefined ? 'not_applicable' : 'passed');
     }
     if (derived['length'] === 0) warnings = ['零向量：方向未定义（图中以零向量标记显示）'];
+    warnings = [...warnings, ...(cap.warnings?.(doc.params, derived) ?? [])];
     return {
       ok: true,
       capability: { id: cap.id, version: cap.version },
@@ -328,12 +349,16 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       documentHash: hashHex(canonicalJson(doc)),
       derived,
       summary: {
-        unit: 'dimensionless',
+        unit: cap.unit,
         coordinates: cap.coordinates,
         assumptions: cap.assumptions,
         defaultsApplied,
       },
-      checks: { structure: 'passed', math: 'passed', physics: 'not_applicable', visual: 'not_run' },
+      checks: {
+        structure: 'passed', math: 'passed',
+        physics: cap.physicsCheck === undefined ? 'not_applicable' : 'passed',
+        visual: 'not_run',
+      },
       warnings,
     };
   }
@@ -436,7 +461,7 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       const doc: SceneDocument = {
         schemaVersion: 1, instanceId: instanceId as string,
         templateId: cap.id, templateVersion: cap.version,
-        unit: 'dimensionless', params, presentation,
+        unit: cap.unit, params, presentation,
       };
       return successEnvelope(cap, doc, defaultsApplied);
     },
@@ -586,7 +611,7 @@ function documentJsonSchema(cap: CapabilityDefinition): Record<string, unknown> 
       instanceId: { type: 'string', pattern: ID_PATTERN.source },
       templateId: { const: cap.id },
       templateVersion: { const: cap.version },
-      unit: { const: 'dimensionless' },
+      unit: { const: cap.unit },
       params: cap.paramsJsonSchema,
       presentation: {
         type: 'object', additionalProperties: false,

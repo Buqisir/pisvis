@@ -1,5 +1,10 @@
 export { vec2, add, sub, scale, dot, magnitude, normalize } from './math/vec2.js';
 export type { Vec2 } from './math/vec2.js';
+export {
+  flightRange, flightTime, landingSpeed, midpointX, stateAt, timeDomain,
+  trajectoryPoints,
+} from './models/projectile.js';
+export type { ProjectileInput, ProjectileState } from './models/projectile.js';
 export { worldToScreen, screenToWorld } from './core/viewport.js';
 export type { Viewport } from './core/viewport.js';
 export { applyAffine, invertAffine } from './core/affine.js';

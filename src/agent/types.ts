@@ -3,12 +3,17 @@ import type { SceneItem } from '../render/scene.js';
 
 // ---- scene document v1 (plain JSON) ----------------------------------------
 
+/** Document unit marker. 'dimensionless' for pure math diagrams; 'si' for
+    real-unit models (the capability's `coordinates`/`constraints` spell out
+    which quantity carries which SI unit). */
+export type SceneUnit = 'dimensionless' | 'si';
+
 export interface SceneDocument {
   readonly schemaVersion: 1;
   readonly instanceId: string;
   readonly templateId: string;
   readonly templateVersion: number;
-  readonly unit: 'dimensionless';
+  readonly unit: SceneUnit;
   readonly params: Record<string, unknown>;
   readonly presentation: {
     readonly theme: { readonly id: string; readonly version: number };
@@ -47,7 +52,7 @@ export interface ApiError {
 export interface Checks {
   readonly structure: 'passed' | 'failed';
   readonly math: 'passed' | 'failed' | 'not_run';
-  readonly physics: 'not_applicable';
+  readonly physics: 'passed' | 'failed' | 'not_applicable';
   readonly visual: 'not_run';
 }
 
@@ -59,7 +64,7 @@ export interface SceneSuccess {
   readonly documentHash: string;
   readonly derived: Record<string, unknown>;
   readonly summary: {
-    readonly unit: 'dimensionless';
+    readonly unit: SceneUnit;
     readonly coordinates: string;
     readonly assumptions: readonly string[];
     /** JSON paths that were filled from capability defaults. */
@@ -122,11 +127,11 @@ export interface CapabilityDefinition {
   readonly goodFor: readonly string[];
   readonly notFor: readonly string[];
   readonly keywords: { readonly zh: readonly string[]; readonly en: readonly string[] };
-  readonly kind: 'math-diagram';
+  readonly kind: 'math-diagram' | 'physics-model';
   readonly available: true;
   readonly outputs: readonly ['scene-json', 'svg', 'report'];
   readonly runtime: string;
-  readonly unit: 'dimensionless';
+  readonly unit: SceneUnit;
   readonly coordinates: string;
   readonly assumptions: readonly string[];
   /** Internal runtime schema (valibot); never exposed as a type. */
@@ -142,6 +147,17 @@ export interface CapabilityDefinition {
     readonly presentation: SceneDocument['presentation'];
   };
   readonly examples: CapabilityExample;
+  /**
+   * Physics-domain check between structural parse and derived computation —
+   * for cross-field semantics a schema cannot express (e.g. t <= T). Runs on
+   * normalized params; returned errors fail with checks.physics='failed'.
+   * Only `physics-model` capabilities provide it; others report not_applicable.
+   */
+  readonly physicsCheck?: (params: Record<string, unknown>) => readonly ApiError[];
+  /** Extra warnings for degenerate-but-valid states (free fall, landed…). */
+  readonly warnings?: (
+    params: Record<string, unknown>, derived: Record<string, unknown>,
+  ) => readonly string[];
   readonly derive: (params: Record<string, unknown>) => Record<string, unknown>;
   readonly scene: (
     params: Record<string, unknown>,

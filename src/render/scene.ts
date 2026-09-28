@@ -56,6 +56,15 @@ export type SceneItem =
       readonly from: Vec2;
       readonly to: Vec2;
       readonly dashed?: boolean;
+    }
+  | {
+      readonly kind: 'path';
+      readonly id: string;
+      readonly role: SceneRole;
+      /** 2..4096 world points joined as an open polyline (never filled). */
+      readonly points: readonly Vec2[];
+      readonly dashed?: boolean;
+      readonly label?: SceneLabel;
     };
 
 export interface SceneSvgOptions {
@@ -278,6 +287,39 @@ function renderPoint(ctx: Ctx, item: Extract<SceneItem, { kind: 'point' }>): str
   return `<g class="pv-item pv-point pv-role-${role} ${stateClass(state)}" data-item-id="${item.id}">${parts.join('')}</g>`;
 }
 
+const MAX_PATH_POINTS = 4096;
+
+function renderPath(ctx: Ctx, item: Extract<SceneItem, { kind: 'path' }>): string {
+  const { theme, view } = ctx;
+  const role = item.role;
+  checkRole(role);
+  const label = checkLabel(item.label);
+  if (item.points.length < 2 || item.points.length > MAX_PATH_POINTS) {
+    throw new RangeError(`path needs 2..${MAX_PATH_POINTS} points (received ${item.points.length})`);
+  }
+  const pts = item.points.map((p) => worldToScreen(p, view));
+  const attr = pts.map((p) => `${p.x},${p.y}`).join(' ');
+  const dash = item.dashed ? ` stroke-dasharray="${dashFor(role, theme)}"` : '';
+  const parts = [
+    `<polyline class="pv-path" points="${attr}" fill="none" stroke-width="${theme.stroke.aux}"${dash}` +
+      ` stroke-linecap="${ctx.linecap}" stroke-linejoin="${ctx.linejoin}"/>`,
+  ];
+  if (label !== undefined) {
+    const last = pts.length - 1;
+    const { anchorPx, dir } =
+      label.anchor === 'start'
+        ? { anchorPx: pts[0]!, dir: normalize(sub(pts[1]!, pts[0]!)) }
+        : label.anchor === 'mid'
+          ? {
+              anchorPx: pts[last >> 1]!,
+              dir: normalize(sub(pts[(last >> 1) + 1]!, pts[last >> 1]!)),
+            }
+          : { anchorPx: pts[last]!, dir: normalize(sub(pts[last]!, pts[last - 1]!)) };
+    parts.push(labelTag(label, anchorPx, dir, labelClearance(theme, false), theme.text.label));
+  }
+  return `<g class="pv-item pv-path-item pv-role-${role} ${stateClass('default')}" data-item-id="${item.id}">${parts.join('')}</g>`;
+}
+
 function renderSegment(ctx: Ctx, item: Extract<SceneItem, { kind: 'segment' }>): string {
   const { theme, view } = ctx;
   const role = item.role;
@@ -376,7 +418,7 @@ export function renderSceneSvg(options: SceneSvgOptions): string {
     checkId(item.id, 'item.id');
     if (seen.has(item.id)) throw new RangeError(`duplicate item id: ${item.id}`);
     seen.add(item.id);
-    if (!['axes', 'arrow', 'point', 'segment'].includes(item.kind)) {
+    if (!['axes', 'arrow', 'point', 'segment', 'path'].includes(item.kind)) {
       throw new RangeError(`unknown scene item kind: ${String(item.kind)}`);
     }
   }
@@ -397,6 +439,7 @@ export function renderSceneSvg(options: SceneSvgOptions): string {
       case 'arrow': parts.push(renderArrow(ctx, item)); break;
       case 'point': parts.push(renderPoint(ctx, item)); break;
       case 'segment': parts.push(renderSegment(ctx, item)); break;
+      case 'path': parts.push(renderPath(ctx, item)); break;
     }
   }
 

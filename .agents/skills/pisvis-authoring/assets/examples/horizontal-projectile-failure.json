@@ -1,0 +1,14 @@
+{
+  "request": {
+    "templateId": "horizontal-projectile",
+    "templateVersion": 1,
+    "params": {
+      "h": 20,
+      "u": 10,
+      "g": 10,
+      "t": 5
+    }
+  },
+  "expectedCode": "out-of-range",
+  "fix": "t 必须落在飞行时间域 [0,T]：本例 h=20、g=10 → T=√(2·20/10)=2 s，t=5 已穿地；改 set-t ≤ 2 或调 h/g/u"
+}

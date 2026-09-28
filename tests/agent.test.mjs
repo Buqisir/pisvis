@@ -113,6 +113,7 @@ test('document errors: schemaVersion, unknown field, unit, theme', () => {
   check((d) => { d.schemaVersion = 2; }, 'unsupported-schema-version', 'schemaVersion');
   check((d) => { d.extra = 1; }, 'unknown-field', 'document');
   check((d) => { d.unit = 'm'; }, 'unit-mismatch', 'unit');
+  check((d) => { d.unit = 'si'; }, 'unit-mismatch', 'unit'); // arrow is dimensionless
   check((d) => { d.params.unit = 'm'; }, 'unit-mismatch', 'params.unit');
   check((d) => { d.presentation.theme = { id: 'illustrated', version: 1 }; }, 'unknown-theme', 'theme');
   // unknown-theme carries the registered id@version list so agents can self-correct
@@ -200,12 +201,15 @@ test('render twice gives identical svg; theme/canvas/viewport do not change deri
 
 test('listCapabilities: short catalog, stable order, keyword filter', () => {
   const all = authoring.listCapabilities();
-  assert.equal(all.total, 3);
-  assert.deepEqual(all.items.map((i) => i.id), ['arrow', 'vector-add', 'vector-decompose']);
+  assert.equal(all.total, 4);
+  assert.deepEqual(all.items.map((i) => i.id),
+    ['arrow', 'horizontal-projectile', 'vector-add', 'vector-decompose']);
   assert.equal(authoring.listCapabilities({ keyword: '向量' }).total, 3);
   assert.equal(authoring.listCapabilities({ keyword: 'vector' }).total, 3);
-  assert.equal(authoring.listCapabilities({ keyword: '分解' }).total, 1);
-  assert.equal(authoring.listCapabilities({ keyword: '平抛' }).total, 0);
+  assert.equal(authoring.listCapabilities({ keyword: '分解' }).total, 2);
+  assert.equal(authoring.listCapabilities({ keyword: '平抛' }).total, 1);
+  assert.equal(authoring.listCapabilities({ kind: 'physics-model' }).total, 1);
+  assert.equal(authoring.listCapabilities({ kind: 'math-diagram' }).total, 3);
   assert.equal(authoring.listCapabilities({ kind: 'physics-template' }).total, 0);
 });
 
@@ -231,7 +235,8 @@ test('describeCapability returns schemas, constraints and runnable examples', ()
   assert.equal(missing.errors[0].code, 'missing-field');
   const unk = authoring.describeCapability({ id: 'nope', version: 1 });
   assert.equal(unk.errors[0].code, 'unknown-capability');
-  assert.deepEqual(unk.errors[0].allowedValues, ['arrow', 'vector-add', 'vector-decompose']);
+  assert.deepEqual(unk.errors[0].allowedValues,
+    ['arrow', 'horizontal-projectile', 'vector-add', 'vector-decompose']);
 });
 
 test('registry extensibility: a test-only capability flows through unchanged', () => {
@@ -414,8 +419,125 @@ test('vector-decompose: on-axis and zero vectors still render', () => {
   assert.match(authoring.renderScene({ document: zero.document }).svg, /pv-zero/);
 });
 
+// ---- horizontal-projectile (physics-model, si) --------------------------------
+
+const CREATE_PROJ = {
+  templateId: 'horizontal-projectile', templateVersion: 1,
+  params: { h: 20, u: 10, g: 10, t: 1 },
+};
+
+test('projectile: acceptance numbers from the model card (h=20,u=10,g=10)', () => {
+  const r = authoring.createScene(clone(CREATE_PROJ));
+  assert.ok(r.ok, JSON.stringify(r.errors));
+  assert.equal(r.document.unit, 'si');
+  assert.equal(r.checks.physics, 'passed');
+  // t=1: position (10,15), velocity (10,-10), speed √200 — Issue #4 主例
+  assert.deepEqual(r.derived.position, { x: 10, y: 15 });
+  assert.deepEqual(r.derived.velocity, { x: 10, y: -10 });
+  assert.equal(r.derived.speed, Math.sqrt(200));
+  assert.equal(r.derived.alphaDeg, 45);
+  assert.equal(r.derived.T, 2);
+  assert.equal(r.derived.R, 20);
+  assert.equal(r.derived.landingSpeed, Math.sqrt(500));
+  assert.equal(r.derived.landed, false);
+  // 例 3 不变量：速度反向延长线过水平位移中点
+  assert.equal(r.derived.midpointX, 5);
+  // t=0 and t=T boundaries
+  const t0 = authoring.createScene({ templateId: 'horizontal-projectile', templateVersion: 1, params: { h: 20, u: 10, g: 10, t: 0 } });
+  assert.deepEqual(t0.derived.velocity, { x: 10, y: 0 });
+  assert.equal(t0.derived.alphaDeg, 0);
+  assert.equal(t0.derived.thetaDeg, null); // displacement is zero
+  const tT = authoring.createScene({ templateId: 'horizontal-projectile', templateVersion: 1, params: { h: 20, u: 10, g: 10, t: 2 } });
+  assert.deepEqual(tT.derived.position, { x: 20, y: 0 });
+  assert.deepEqual(tT.derived.velocity, { x: 10, y: -20 });
+  assert.equal(tT.derived.landed, true);
+  assert.ok(tT.warnings.some((w) => w.includes('落地')));
+});
+
+test('projectile: t beyond flight time fails at the physics stage, not math', () => {
+  const r = authoring.createScene({ templateId: 'horizontal-projectile', templateVersion: 1, params: { h: 20, u: 10, g: 10, t: 5 } });
+  assert.equal(r.ok, false);
+  assert.equal(r.errors[0].code, 'out-of-range');
+  assert.equal(r.errors[0].path, 'document.params.t');
+  assert.equal(r.checks.physics, 'failed');
+  assert.equal(r.checks.math, 'not_run');
+  // same rejection through updateScene — the whole op fails, doc untouched
+  const doc = authoring.createScene(clone(CREATE_PROJ)).document;
+  const u = authoring.updateScene({ document: clone(doc), operations: [{ op: 'set-t', value: 9 }] });
+  assert.equal(u.ok, false);
+  assert.equal(u.errors[0].code, 'out-of-range');
+});
+
+test('projectile: set-t scrubs the snapshot; set-h recomputes the time domain', () => {
+  const doc = authoring.createScene(clone(CREATE_PROJ)).document;
+  const half = authoring.updateScene({ document: clone(doc), operations: [{ op: 'set-t', value: 0.5 }] });
+  assert.ok(half.ok, JSON.stringify(half.errors));
+  assert.deepEqual(half.derived.position, { x: 5, y: 18.75 });
+  assert.deepEqual(half.derived.velocity, { x: 10, y: -5 });
+  // h=45 → T=3, so the previously-invalid t=2.5 becomes reachable
+  const taller = authoring.updateScene({
+    document: clone(doc),
+    operations: [{ op: 'set-h', value: 45 }, { op: 'set-t', value: 2.5 }],
+  });
+  assert.ok(taller.ok, JSON.stringify(taller.errors));
+  assert.equal(taller.derived.T, 3);
+  assert.equal(taller.derived.position.y, 45 - 0.5 * 10 * 2.5 * 2.5);
+});
+
+test('projectile: u=0 free-fall degenerate renders and warns, no division by u', () => {
+  const r = authoring.createScene({ templateId: 'horizontal-projectile', templateVersion: 1, params: { h: 20, u: 0, g: 10, t: 1 } });
+  assert.ok(r.ok, JSON.stringify(r.errors));
+  assert.deepEqual(r.derived.position, { x: 0, y: 15 });
+  assert.deepEqual(r.derived.velocity, { x: 0, y: -10 });
+  assert.equal(r.derived.alphaDeg, 90);
+  assert.equal(r.derived.thetaDeg, 90);
+  assert.equal(r.derived.midpointX, null); // v parallel to launch line
+  assert.ok(r.warnings.some((w) => w.includes('自由落体')));
+  const s = authoring.renderScene({ document: r.document });
+  assert.ok(s.ok);
+  assert.match(s.svg, /pv-zero/); // vx is a zero vector marker
+});
+
+test('projectile: render is deterministic; theme/canvas change no physics', () => {
+  const doc = authoring.createScene(clone(CREATE_PROJ)).document;
+  const a = authoring.renderScene({ document: clone(doc) });
+  const b = authoring.renderScene({ document: clone(doc) });
+  assert.equal(a.svg, b.svg);
+  for (const frag of ['pv-path', 'pv-role-input', 'pv-role-component', 'pv-role-guide', 'pv-state-readonly']) {
+    assert.ok(a.svg.includes(frag), `svg contains ${frag}`);
+  }
+  for (const text of ['>O<', '>P<', '>v<', '>vx<', '>vy<', '>落点<', '>轨迹<']) {
+    assert.ok(a.svg.includes(text), `svg contains label ${text}`);
+  }
+  const dark = authoring.updateScene({
+    document: clone(doc),
+    operations: [{ op: 'set-theme', value: { id: 'linework', version: 1 } }],
+  });
+  assert.ok(dark.ok);
+  assert.equal(dark.derived.speed, a.derived.speed);
+  assert.equal(dark.derived.T, 2);
+  // derived fields stay readonly
+  const ro = authoring.updateScene({ document: clone(doc), operations: [{ op: 'set-position', value: { x: 0, y: 0 } }] });
+  assert.equal(ro.errors[0].code, 'readonly-field');
+});
+
+test('projectile: editor bounds reject non-physical and overflow params', () => {
+  for (const [params, code] of [
+    [{ h: 0, u: 10, g: 10 }, 'out-of-range'],
+    [{ h: 101, u: 10, g: 10 }, 'out-of-range'],
+    [{ h: 20, u: -1, g: 10 }, 'out-of-range'],
+    [{ h: 20, u: 10, g: 0.5 }, 'out-of-range'],
+    [{ h: 20, u: 10, g: 10, t: -1 }, 'out-of-range'],
+    [{ h: 20, u: 10, g: 10, t: 'x' }, 'invalid-type'],
+  ]) {
+    const r = authoring.createScene({ templateId: 'horizontal-projectile', templateVersion: 1, params });
+    assert.equal(r.ok, false, JSON.stringify(params));
+    assert.equal(r.errors[0].code, code, JSON.stringify(r.errors));
+  }
+});
+
 test('new capabilities describe: schemas and examples are runnable', () => {
-  for (const id of ['vector-add', 'vector-decompose']) {
+  for (const id of ['horizontal-projectile', 'vector-add', 'vector-decompose']) {
     const d = authoring.describeCapability({ id, version: 1 });
     assert.ok(d.ok, id);
     const c = d.capability;

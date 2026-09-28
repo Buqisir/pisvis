@@ -12,7 +12,7 @@ export const SCENE_BASE_CSS = `
 .pv-role-component { --pv-role: var(--pv-component); }
 .pv-role-guide { --pv-role: var(--pv-guide); }
 
-.pv-shaft, .pv-seg { stroke: var(--pv-role); }
+.pv-shaft, .pv-seg, .pv-path { stroke: var(--pv-role); }
 .pv-gridline { stroke: var(--pv-grid); }
 .pv-axis-line { stroke: var(--pv-axis); }
 .pv-axis-head { fill: var(--pv-axis); }
