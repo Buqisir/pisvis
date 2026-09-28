@@ -15,6 +15,7 @@ import {
 } from '../src/questions/session.js';
 import type { SceneDocument, SceneOperation } from '../src/agent.js';
 import type { QuestionSession } from '../src/questions/session.js';
+import type { TeachingCue } from '../src/questions/types.js';
 import { fmt } from './format.js';
 
 // 一页可同时开多个相互隔离的题板：每个题板 = 一个 QuestionSession（情境图文档）
@@ -66,6 +67,12 @@ const PANEL_HTML = `
     <div class="qp-formula" aria-label="公式面板"></div>
     <p class="p-status" role="status" aria-live="polite"></p>
     <p class="p-readout"></p>
+    <div class="q-guide" hidden>
+      <span class="g-counter" aria-live="polite"></span>
+      <button type="button" class="g-prev">‹ 上一步</button>
+      <button type="button" class="g-next">下一步 ›</button>
+      <button type="button" class="g-exit">结束讲解</button>
+    </div>
     <ol class="q-steps"></ol>
   </div>
 `;
@@ -122,13 +129,21 @@ class ProjectilePanel {
     reset: HTMLButtonElement;
     status: HTMLParagraphElement;
     readout: HTMLParagraphElement;
+    controls: HTMLFormElement;
     steps: HTMLOListElement;
     teach: HTMLButtonElement;
+    guide: HTMLDivElement;
+    gCounter: HTMLSpanElement;
+    gPrev: HTMLButtonElement;
+    gNext: HTMLButtonElement;
+    gExit: HTMLButtonElement;
     formula: HTMLDivElement;
     extras: HTMLDivElement;
   };
 
   private teachRun: TeachingSequence | null = null;
+  /** 逐步讲解模式：null = 未在讲解；数字 = 当前步骤下标。 */
+  private teachStep: number | null = null;
 
   constructor(
     root: HTMLElement,
@@ -155,8 +170,14 @@ class ProjectilePanel {
       reset: pick(root, '.btn-reset', HTMLButtonElement),
       status: pick(root, '.p-status', HTMLParagraphElement),
       readout: pick(root, '.p-readout', HTMLParagraphElement),
+      controls: pick(root, '.qp-controls', HTMLFormElement),
       steps: pick(root, '.q-steps', HTMLOListElement),
       teach: pick(root, '.q-teach', HTMLButtonElement),
+      guide: pick(root, '.q-guide', HTMLDivElement),
+      gCounter: pick(root, '.g-counter', HTMLSpanElement),
+      gPrev: pick(root, '.g-prev', HTMLButtonElement),
+      gNext: pick(root, '.g-next', HTMLButtonElement),
+      gExit: pick(root, '.g-exit', HTMLButtonElement),
       formula: pick(root, '.qp-formula', HTMLDivElement),
       extras: pick(root, '.qp-extras', HTMLDivElement),
     };
@@ -205,24 +226,16 @@ class ProjectilePanel {
       this.draw();
     });
     this.els.teach.addEventListener('click', () => {
-      if (this.teachRun !== null) {
-        this.teachRun.cancel();
-        this.teachRun = null;
-        this.els.teach.textContent = '讲解演示';
-        return;
-      }
-      // Container-level emphasis only: physics geometry is owned by the
-      // document/render path and the playback clock, never by easing.
-      this.teachRun = runTeachingSequence(
-        { scene: this.els.sceneView, vectors: this.els.graphView, panels: this.els.extras },
-        { reduced: this.reducedMotion() },
-      );
-      this.els.teach.textContent = '停止讲解';
-      void this.teachRun.finished.then(() => {
-        this.teachRun = null;
-        this.els.teach.textContent = '讲解演示';
-      });
+      if (this.teachStep !== null) this.exitGuide();
+      else this.enterGuide();
     });
+    this.els.gPrev.addEventListener('click', () => this.gotoStep((this.teachStep ?? 0) - 1));
+    this.els.gNext.addEventListener('click', () => {
+      const last = this.session.instance.steps.length - 1;
+      if (this.teachStep !== null && this.teachStep >= last) this.exitGuide();
+      else this.gotoStep((this.teachStep ?? -1) + 1);
+    });
+    this.els.gExit.addEventListener('click', () => this.exitGuide());
     this.els.restore.addEventListener('click', () => {
       this.stopClock();
       const r = sessionRestoreOriginal(this.session);
@@ -241,9 +254,7 @@ class ProjectilePanel {
     const q = PROJECTILE_QUESTIONS.find((item) => item.id === id);
     if (q === undefined) return;
     this.stopClock();
-    this.teachRun?.cancel();
-    this.teachRun = null;
-    this.els.teach.textContent = '讲解演示';
+    this.exitGuide();
     if (this.session !== undefined) sessionDestroy(this.session);
     const created = createSession(q, authoring, { instanceId: `${this.slot}-${q.id}` });
     if (!created.ok) {
@@ -267,7 +278,7 @@ class ProjectilePanel {
     this.els.goal.textContent = `${q.title} — ${q.goal}`;
     this.els.steps.replaceChildren(...q.steps.map((s) => {
       const li = document.createElement('li');
-      li.textContent = s;
+      li.textContent = s.text;
       return li;
     }));
     this.syncControls();
@@ -353,6 +364,73 @@ class ProjectilePanel {
       `P ${fmtVec(pos)} m · v ${fmtVec(vel)} m/s · |v| ${(d['speed'] as number).toFixed(2)} m/s · ` +
       `R = ${fmt(d['R'] as number)} m` +
       (d['landed'] === true ? ' · 已落地' : '');
+    // 任何重绘后恢复讲解态装饰（公式 DOM 每帧重建，类名随之丢失）。
+    this.decorateStep();
+  }
+
+  // ---- guided teaching ------------------------------------------------------
+
+  private focusEl(view: NonNullable<TeachingCue['focus']>): HTMLElement {
+    const map = {
+      scene: this.els.sceneView,
+      graph: this.els.graphView,
+      formula: this.els.formula,
+      conditions: this.els.controls,
+    };
+    return map[view];
+  }
+
+  /** 进入逐步讲解：入场仍用容器级序列铺场，随后步骤由 cue 驱动。 */
+  private enterGuide(): void {
+    this.stopClock();
+    this.teachRun?.cancel();
+    this.teachRun = runTeachingSequence(
+      { scene: this.els.sceneView, vectors: this.els.graphView, panels: this.els.extras },
+      { reduced: this.reducedMotion() },
+    );
+    void this.teachRun.finished.then(() => { this.teachRun = null; });
+    this.els.guide.hidden = false;
+    this.els.teach.textContent = '结束讲解';
+    this.gotoStep(0);
+  }
+
+  private gotoStep(index: number): void {
+    const steps = this.session.instance.steps;
+    this.teachStep = Math.min(Math.max(index, 0), steps.length - 1);
+    const cue = steps[this.teachStep]?.cue;
+    // cue.t 先走会话边界（draw 会重建公式 DOM），装饰在 draw 末尾统一恢复。
+    if (cue?.t !== undefined) this.commitT(cue.t);
+    else this.decorateStep();
+  }
+
+  /** 把当前步骤的高亮/cue 装饰写回 DOM；teachStep 为 null 时只负责清空。 */
+  private decorateStep(): void {
+    for (const el of [this.els.sceneView, this.els.graphView, this.els.formula, this.els.controls]) {
+      el.classList.remove('teach-focus');
+    }
+    for (const li of this.els.steps.children) li.classList.remove('s-current');
+    for (const item of this.els.formula.children) item.classList.remove('f-focus');
+    const i = this.teachStep;
+    if (i === null) return;
+    const steps = this.session.instance.steps;
+    this.els.gCounter.textContent = `讲解 ${i + 1} / ${steps.length}`;
+    this.els.gPrev.disabled = i === 0;
+    this.els.gNext.textContent = i === steps.length - 1 ? '完成' : '下一步 ›';
+    this.els.steps.children[i]?.classList.add('s-current');
+    const cue = steps[i]?.cue;
+    if (cue?.focus !== undefined) this.focusEl(cue.focus).classList.add('teach-focus');
+    if (cue?.formula !== undefined) {
+      this.els.formula.querySelector(`[data-formula="${cue.formula}"]`)?.classList.add('f-focus');
+    }
+  }
+
+  private exitGuide(): void {
+    this.teachStep = null;
+    this.teachRun?.cancel();
+    this.teachRun = null;
+    this.els.guide.hidden = true;
+    this.els.teach.textContent = '讲解演示';
+    this.decorateStep();
   }
 
   // ---- time + playback ------------------------------------------------------
@@ -440,8 +518,7 @@ class ProjectilePanel {
 
   destroy(): void {
     this.stopClock();
-    this.teachRun?.cancel();
-    this.teachRun = null;
+    this.exitGuide();
     if (this.session !== undefined && !this.session.destroyed) sessionDestroy(this.session);
   }
 

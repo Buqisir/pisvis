@@ -6,6 +6,21 @@
 /** 'original' = 原题模式（题设未被改动）；'explore' = 探索模式（题设被改动过）。 */
 export type QuestionMode = 'original' | 'explore';
 
+/** 讲解步骤的可选提示：把「这一步讲的什么」绑到时刻、公式或面板区域。 */
+export interface TeachingCue {
+  /** 进入该步时把 t 滑到这个时刻（走会话校验边界，与用户拖滑块等价）。 */
+  readonly t?: number;
+  /** 公式面板里要点亮的注册公式 id（如 'T'、'R'、'vy'）。 */
+  readonly formula?: string;
+  /** 该步聚焦的区域：情境图 / v–t 图 / 公式面板 / 条件控件。 */
+  readonly focus?: 'scene' | 'graph' | 'formula' | 'conditions';
+}
+
+export interface TeachingStep {
+  readonly text: string;
+  readonly cue?: TeachingCue;
+}
+
 export interface QuestionInstance {
   /** 实例 ID：匹配 /^[a-z][a-z0-9-]{0,63}$/；同时用作 SceneDocument.instanceId。 */
   readonly id: string;
@@ -22,8 +37,11 @@ export interface QuestionInstance {
    * SI 单位：h 用 m、u 用 m/s、g 用 m/s²、t 用 s；取值边界由能力 schema 校验。
    */
   readonly params: Record<string, unknown>;
-  /** 教学步骤：课堂讲解顺序的短句，不含可执行内容。 */
-  readonly steps: readonly string[];
+  /**
+   * 教学步骤：课堂讲解顺序的短句 + 可选 cue（这一步讲的东西指到哪）。
+   * cue 只是呈现提示；t 经会话边界校验，formula 是注册式 id。
+   */
+  readonly steps: readonly TeachingStep[];
   /**
    * 探索模式下允许改动的题设字段（对平抛题为 ['h','u','g']）。
    * t 不列入：时间 scrub 在两种模式下都允许，且不算题设修改。

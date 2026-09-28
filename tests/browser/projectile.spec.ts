@@ -153,30 +153,68 @@ test('projectile page: formula panel tracks the same t; u=0 shows precondition t
   await expect(formula.locator('.f-item[data-formula="traj"]')).toContainText('u=0');
 });
 
-test('projectile page: teaching sequence runs and cancels; reduced motion applies instantly', async ({
+test('projectile page: guided teaching walks steps with cues bound to t/formula/view', async ({
   page,
 }) => {
   await page.goto('/projectile.html');
-  const a = page.locator('[data-panel="p-a"]');
+  const a = page.locator('[data-panel="p-a"]'); // q-landing-time: T=3, R=30
   const teach = a.locator('.q-teach');
 
-  // Normal run: button toggles to stop; container gets animated in ~1.05s.
+  // Enter guide: step 1/3 highlights, cue points at the conditions form.
   await teach.click();
-  await expect(teach).toHaveText('停止讲解');
-  await expect(teach).toHaveText('讲解演示', { timeout: 4000 });
+  await expect(teach).toHaveText('结束讲解');
+  await expect(a.locator('.q-guide')).toBeVisible();
+  await expect(a.locator('.g-counter')).toHaveText('讲解 1 / 3');
+  await expect(a.locator('.g-prev')).toBeDisabled();
+  await expect(a.locator('.q-steps li').nth(0)).toHaveClass(/s-current/);
+  await expect(a.locator('.qp-controls')).toHaveClass(/teach-focus/);
 
-  // Reduced motion: the whole sequence lands synchronously — no in-flight.
-  await page.locator('#opt-motion').check();
-  await teach.click();
-  await expect(a.locator('[data-view="scene"]')).toHaveCSS('opacity', '1');
-  await expect(teach).toHaveText('讲解演示', { timeout: 1500 });
+  // Step 2: the T formula lights up in the formula panel.
+  await a.locator('.g-next').click();
+  await expect(a.locator('.g-counter')).toHaveText('讲解 2 / 3');
+  await expect(a.locator('.q-steps li').nth(1)).toHaveClass(/s-current/);
+  await expect(a.locator('.f-item[data-formula="T"]')).toHaveClass(/f-focus/);
+  await expect(a.locator('.qp-formula')).toHaveClass(/teach-focus/);
 
-  // Start a run and switch question mid-flight: the run is cancelled,
-  // the panel rebuilds cleanly with the button reset.
-  await page.locator('#opt-motion').uncheck();
-  await teach.click();
-  await a.locator('.q-select').selectOption('q-range');
+  // Step 3: cue drives t to 3 through the session boundary — ball lands,
+  // scene gets the focus, R formula lights.
+  await a.locator('.g-next').click();
+  await expect(a.locator('.g-next')).toHaveText('完成');
+  await expect(a.locator('.p-readout')).toHaveText(/t = 3 s \/ T = 3 s/);
+  await expect(a.locator('.p-readout')).toHaveText(/已落地/);
+  await expect(a.locator('[data-view="scene"]')).toHaveClass(/teach-focus/);
+  await expect(a.locator('.f-item[data-formula="R"]')).toHaveClass(/f-focus/);
+  const [s] = await snaps(page);
+  expect(s.params.t).toBe(3);
+
+  // 上一步 returns to step 2 (formula focus back); 完成 exits cleanly.
+  await a.locator('.g-prev').click();
+  await expect(a.locator('.g-counter')).toHaveText('讲解 2 / 3');
+  await a.locator('.g-next').click();
+  await a.locator('.g-next').click(); // 完成
+  await expect(a.locator('.q-guide')).toBeHidden();
   await expect(teach).toHaveText('讲解演示');
+  await expect(a.locator('.f-item.f-focus')).toHaveCount(0);
+  await expect(a.locator('.teach-focus')).toHaveCount(0);
+});
+
+test('projectile page: reduced-motion guide still applies step cues instantly', async ({ page }) => {
+  await page.goto('/projectile.html');
+  const a = page.locator('[data-panel="p-a"]');
+  await page.locator('#opt-motion').check();
+
+  await a.locator('.q-teach').click();
+  // Stepping is content, not motion: focus classes land synchronously.
+  await expect(a.locator('.g-counter')).toHaveText('讲解 1 / 3');
+  await expect(a.locator('.qp-controls')).toHaveClass(/teach-focus/);
+  await a.locator('.g-exit').click();
+  await expect(a.locator('.q-guide')).toBeHidden();
+
+  // Switching question mid-guide exits cleanly and rebuilds the session.
+  await a.locator('.q-teach').click();
+  await a.locator('.q-select').selectOption('q-range');
+  await expect(a.locator('.q-guide')).toBeHidden();
+  await expect(a.locator('.q-teach')).toHaveText('讲解演示');
   await expect(a.locator('.p-readout')).toHaveText(/t = 0 s \/ T = 2 s/);
 });
 

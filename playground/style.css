@@ -91,6 +91,16 @@ form select, .row select { font: inherit; padding: 4px; }
 .f-item { font-size: 14px; min-width: 0; overflow-x: auto; }
 .f-item .f-tex .katex { font-size: 1.02em; }
 .f-item.f-na { font-size: 12px; color: #8a6d3b; }
+
+/* guided teaching */
+.q-guide { display: flex; gap: 10px; align-items: center; margin: 10px 0 4px; font-size: 13px; }
+.q-guide[hidden] { display: none; }
+.q-guide .g-counter { font-variant-numeric: tabular-nums; color: #47585e; }
+.q-guide button { font-size: 13px; padding: 3px 12px; border-radius: 6px; border: 1px solid #b9c4c8; background: #f4f6f7; }
+.q-steps li { border-radius: 6px; padding: 1px 6px; margin-left: -6px; }
+.q-steps li.s-current { background: #fdf3e3; outline: 1px solid #e3c98f; color: #2c3e44; font-weight: 600; }
+.teach-focus { outline: 2px solid #c98a2c; outline-offset: 3px; border-radius: 6px; }
+.f-item.f-focus { background: #fdf3e3; outline: 1px solid #e3c98f; border-radius: 6px; padding: 0 4px; margin: 0 -4px; }
 @media (max-width: 960px) { #panels { grid-template-columns: 1fr; } }
 
 

@@ -1,4 +1,4 @@
-export type { QuestionInstance, QuestionMode } from './types.js';
+export type { QuestionInstance, QuestionMode, TeachingCue, TeachingStep } from './types.js';
 export { PROJECTILE_QUESTIONS } from './projectile.js';
 export {
   createSession,
