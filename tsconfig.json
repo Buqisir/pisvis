@@ -22,5 +22,8 @@
   "include": [
     "src/**/*.ts",
     "playground/**/*.ts"
+  ],
+  "exclude": [
+    "src/cli"
   ]
 }

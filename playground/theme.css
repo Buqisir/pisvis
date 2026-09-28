@@ -1,73 +1,15 @@
-/* Shared pv-* stylesheet: classes map to theme custom properties only.
-   Geometry (stroke widths, radii, dashes) arrives as SVG attributes from the
-   renderer; this file owns colors, state emphasis and motion. */
+/* Shared pv-* interactive stylesheet. The static appearance rules live in
+   src/theme/scene-css.ts (SCENE_BASE_CSS) and are injected by the page — this
+   file owns only pointer/motion behavior. */
 
-.pv-scene { font-family: var(--pv-font-family); color: var(--pv-ink); }
-.pv-scene text { user-select: none; }
-.pv-paper { fill: var(--pv-paper); }
-.pv-paper-dot { fill: var(--pv-grid); }
-
-/* role -> --pv-role mapping */
-.pv-role-input { --pv-role: var(--pv-input); }
-.pv-role-derived { --pv-role: var(--pv-derived); }
-.pv-role-component { --pv-role: var(--pv-component); }
-.pv-role-guide { --pv-role: var(--pv-guide); }
-
-.pv-shaft, .pv-seg { stroke: var(--pv-role); }
-.pv-gridline { stroke: var(--pv-grid); }
-.pv-axis-line { stroke: var(--pv-axis); }
-.pv-axis-head { fill: var(--pv-axis); }
-.pv-head { fill: var(--pv-role); }
-.pv-material-flat .pv-dot { fill: var(--pv-paper); stroke: var(--pv-role); }
-.pv-material-soft .pv-dot { fill: var(--pv-role); stroke: var(--pv-paper); stroke-width: 1.5px; }
-.pv-zero { fill: var(--pv-role); }
-.pv-material-flat .pv-zero { fill: var(--pv-role); stroke: none; }
-.pv-halo { fill: var(--pv-role); fill-opacity: 0.10; }
-
-/* error must not be color-only: role stroke stays, error underlay adds a dash */
-.pv-error-underlay > * { stroke: var(--pv-error); fill: none; }
-
-/* handles */
 .pv-handle { cursor: grab; }
 .pv-handle:hover .pv-handle-dot { stroke: var(--pv-selection); stroke-width: 1.5px; }
 .pv-state-dragging .pv-handle { cursor: grabbing; }
 .pv-handle-dot {
-  fill: var(--pv-role);
   transition: fill var(--pv-motion-ms) var(--pv-easing),
     stroke var(--pv-motion-ms) var(--pv-easing);
 }
-.pv-state-selected .pv-handle-dot, .pv-state-dragging .pv-handle-dot {
-  fill: var(--pv-selection);
-}
-.pv-ring {
-  fill: none; stroke: var(--pv-selection); stroke-width: 2px;
-  transition: opacity var(--pv-motion-ms) var(--pv-easing);
-}
-.pv-state-focus .pv-ring { stroke: var(--pv-focus); }
-
-/* text layers */
-.pv-label { fill: var(--pv-ink); font-size: var(--pv-text-label); }
-.pv-tick {
-  fill: var(--pv-muted); font-size: var(--pv-text-value);
-  font-family: var(--pv-font-numeric); font-variant-numeric: tabular-nums;
-}
-.pv-axis-name {
-  fill: var(--pv-muted); font-size: var(--pv-text-value);
-  font-family: var(--pv-font-variable); font-style: italic;
-}
-
-/* per-candidate adjustments kept inside the one shared stylesheet */
-[data-pv-theme="illustrated"] .pv-ticks { display: none; }
-[data-pv-theme="linework"] .pv-role-derived .pv-shaft {
-  stroke-width: calc(var(--pv-stroke-main) + 0.75px);
-}
-
-.pv-ring { transform-box: fill-box; transform-origin: center; }
-/* A v2: lighter selection ring */
-[data-pv-theme="illustrated"] .pv-ring { stroke-width: 1.5px; }
-
-/* variable labels: italic serif (scientific illustration convention) */
-.pv-label-var { font-family: var(--pv-font-variable); font-style: italic; }
+.pv-ring { transition: opacity var(--pv-motion-ms) var(--pv-easing); }
 
 /* reduced motion: the checkbox adds .pv-reduced-motion; the OS setting matches too */
 .pv-reduced-motion .pv-handle-dot, .pv-reduced-motion .pv-ring {

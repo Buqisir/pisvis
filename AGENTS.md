@@ -7,7 +7,7 @@
 视觉工作读 docs/VISUAL_DESIGN.md，模板/模型工作读 docs/REUSE_AND_BINDINGS.md。
 学科工作再读 docs/CURRICULUM.md 和有权访问的具体正文。先核对最新 main 与进行中的 PR，不覆盖别人的工作。
 
-**Spec 通过 GitHub Issue 传递，实现用分支与小 PR。顺序为 #1(M1) → #3(M2) → #4(M3)，不要把总纲一次做完。**
+**Spec 通过 GitHub Issue 传递，实现用分支与小 PR。顺序为 #1(M1) → #6(A1) → #3(M2) → #4(M3)，不要把总纲一次做完。M2 视觉样板（PR #7）已在 A1 前合并；M2 剩余部分复用 A1 的文档/校验契约。**
 
 ## 产品方向
 

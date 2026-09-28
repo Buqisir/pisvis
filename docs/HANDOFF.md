@@ -209,3 +209,32 @@ A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
   A v2 为 provisional。npm run check 61 通过、test:browser 39 通过。
   追加：合并前主题 id 去掉 candidate- 前缀——`illustrated@2` / `linework@1`（版本不变），
   尚无存档文档引用旧 id。
+
+## G. A1-1 创作 API 与 CLI 记录
+
+环境：Node 24.15.0 / npm 11.12.1 / TS 6.0.3 / Playwright 1.63.0（Chromium 1243）。提交 <commit>。
+
+- 依赖（decisions/0001-valibot.md）：valibot@1.5.0、@valibot/to-json-schema@1.8.0（runtime，
+  均 MIT、零传递依赖）；@types/node@24.13.5（dev，仅 CLI）。npm ci 干净通过。
+- 入口隔离：根 `.` 零依赖（import-graph 测试断言无 valibot/node:）；`./agent` 纯数据 API
+  （无 node:，可浏览器/Node）；CLI dist/cli/pisvis.js（shebang、bin 注册、tsconfig.cli.json）。
+- 交付：能力注册表（arrow@1）→ listCapabilities/describeCapability/createScene/validateScene/
+  updateScene/renderScene；场景文档 v1（schemaVersion/instanceId/templateId@version/unit/params/
+  presentation=theme+canvas+viewport）；确定性 documentHash；白名单操作全成功或全失败；
+  独立样式 SVG（SCENE_BASE_CSS + 主题变量内联）；CLI 六个子命令 + stdin/文件输入 +
+  输出目录原子写入（link/rename、不覆盖、拒绝符号链接、路径含空格可测）。
+- 校验边界：请求 ≤256KiB、深度 ≤16、label ≤200、坐标 |v|≤1e6、canvas 64..4096、
+  viewport pixelsPerUnit ≤4096、prototype-pollution 安全；physics 恒 not_applicable。
+- 测试：`npm run check` 87 通过（61 原有 + 26 新增：API 面/错误码/限制/注册表扩展性/
+  import 图/CLI 子进程）；`npm run test:browser` 40 通过（+agent-artifact：CLI 产物 SVG
+  在 Chromium 中着色/不越界，截图 test-results/screenshots/agent-arrow.png）；
+  `npm run build:demo` 通过，gallery 视觉未变。
+- 体积：dist/index.js 静态图 37.2kB（零 bare import）；dist/agent.js 图 67.7kB；
+  dist/cli/pisvis.js 9.6kB；valibot 包体 ~291kB + to-json-schema ~166kB（node_modules 实测）。
+- 复审修正：stdin 改为流式分块读并在超限时中止（不再整读）；产物写入改为 校验目标→写临时文件
+  →提交 三段式，（b）段失败只清临时文件，旧产物字节不变；tsconfig.cli 收窄为 src/cli +
+  ES2022+node types（src 内代码无需 DOM 类型即可编译）；箭头能力的坐标轴向正方向外推
+  下一个整刻度+半单位，斜向中点标签改为垂直偏移≥labelOffset+半字号并选离轴更远一侧；
+  JSON 产物文件补换行符。新增 stdin 超限、覆盖失败回滚、标签-箭杆间距断言。
+- 未做（Issue #6 后续 PR）：MCP stdio 适配、消费 Skill 升级、冷启动消费评测、npm pack
+  仓库外消费测试、Signals（按 Issue 决定推迟）。

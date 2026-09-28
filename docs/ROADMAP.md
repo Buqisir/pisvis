@@ -18,9 +18,16 @@
 该 Issue 的零第三方运行时内核约束只约束本轮/小内核，不是全项目永久禁用依赖。
 不要为了新总纲把 M1 改成一次安装全部库。
 
+## A1：Agent-first 创作入口（进行中）
+
+执行 [Issue #6](https://github.com/Buqisir/pisvis/issues/6)，依赖 M1 验收。
+能力注册表 → 纯数据创作 API（./agent）→ CLI →（后续 PR）MCP stdio 与消费 Skill。
+A1-1 已交付箭头能力的发现/描述/创建/校验/更新/渲染与独立样式 SVG；
+MCP、Skill 升级、冷启动消费评测按 Issue 内顺序继续。
+
 ## M2：统一视觉 + 数学模板复用
 
-执行 [Issue #3](https://github.com/Buqisir/pisvis/issues/3)，依赖 M1 验收。
+执行 [Issue #3](https://github.com/Buqisir/pisvis/issues/3)，依赖 A1 契约；视觉样板部分（PR #7）已完成。
 先做最多两套真实视觉候选和 token；用向量合成/正交分解两种数学场景验证跨场景复用。
 引入 Signals/Valibot 的最小适配，建立版本化实例文档、命令校验、保存/读取与两实例隔离。
 不做通用公式语言、物理求解或自动布局。

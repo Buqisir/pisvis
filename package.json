@@ -12,6 +12,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent.d.ts",
+      "import": "./dist/agent.js"
     }
   },
   "files": [
@@ -22,18 +26,26 @@
   ],
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.cli.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json",
     "build:demo": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "test:browser": "playwright test",
+    "test:browser": "npm run build && playwright test",
     "check": "npm run typecheck && npm test",
     "verify:all": "npm run check && npm run build:demo"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
+    "@types/node": "24.13.5",
     "typescript": "6.0.3",
     "vite": "8.3.0"
+  },
+  "dependencies": {
+    "@valibot/to-json-schema": "1.8.0",
+    "valibot": "1.5.0"
+  },
+  "bin": {
+    "pisvis": "./dist/cli/pisvis.js"
   }
 }
