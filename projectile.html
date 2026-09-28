@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pisvis · 平抛运动快照</title>
+    <link rel="stylesheet" href="/playground/style.css" />
+  </head>
+  <body>
+    <main>
+      <header><p>PISVIS / M3 SNAPSHOT</p><h1>平抛运动</h1>
+        <p>从高度 h 以水平初速度 u 抛出，恒定 g、忽略空气阻力。同一文档驱动图与读数。
+        <a href="./index.html">← 向量实验台</a></p></header>
+      <section class="workspace" aria-label="平抛实验台">
+        <form id="controls">
+          <h2>题目条件</h2>
+          <label>抛出高度 h（m，0–100）<input id="in-h" type="number" min="0" max="100" step="any" value="20" /></label>
+          <label>初速度 u（m/s，0–40）<input id="in-u" type="number" min="0" max="40" step="any" value="10" /></label>
+          <label>g（m/s²，1–20）<input id="in-g" type="number" min="1" max="20" step="any" value="10" /></label>
+          <label>主题
+            <select id="in-theme">
+              <option value="illustrated@2" selected>A · 轻质感插画</option>
+              <option value="linework@1">B · 精确线描</option>
+            </select>
+          </label>
+          <h2>时间</h2>
+          <label class="block">t（s）<input id="in-t" type="range" min="0" max="2" step="0.001" value="0" /></label>
+          <div class="row">
+            <button type="button" id="btn-play">播放</button>
+            <button type="button" id="btn-reset">重置</button>
+            <select id="in-rate" aria-label="播放速率">
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+            </select>
+          </div>
+          <p id="status" role="status" aria-live="polite"></p>
+        </form>
+        <div><div id="canvas" aria-label="平抛图"></div>
+          <p id="readout"></p>
+          <p class="note">拖动时间条或按播放；小球、轨迹分段、速度分解与读数指向同一时刻 t。落地精确停在 T=√(2h/g)，不穿透地面。标签与比例为显示层换算，不改数值。</p></div>
+      </section>
+      <footer>快照能力 horizontal-projectile@1（Agent 同一创作 API）；播放按解析式 t 推进，不按帧累加。多实例、原题/探索模式与公式面板属 Issue #4 余量。</footer>
+    </main>
+    <script type="module" src="/playground/projectile.ts"></script>
+  </body>
+</html>

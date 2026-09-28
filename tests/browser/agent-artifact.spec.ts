@@ -26,6 +26,11 @@ const CAPS: readonly { id: string; create: unknown; shaftGapCheck: boolean }[] =
     create: { templateId: 'vector-decompose', templateVersion: 1, params: { v: { x: 2.4, y: 1.6 } } },
     shaftGapCheck: false,
   },
+  {
+    id: 'horizontal-projectile',
+    create: { templateId: 'horizontal-projectile', templateVersion: 1, params: { h: 20, u: 10, g: 10, t: 1 } },
+    shaftGapCheck: false,
+  },
 ];
 
 for (const cap of CAPS) {
