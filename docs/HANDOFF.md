@@ -241,7 +241,7 @@ A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
 
 ## H. A1-2 MCP 与 Skill 记录
 
-环境：Node 24.15.0 / npm 11.12.1 / TS 6.0.3 / SDK server+client 2.0.0 / Playwright 1.63.0。提交 <commit>。
+环境：Node 24.15.0 / npm 11.12.1 / TS 6.0.3 / SDK server+client 2.0.0 / Playwright 1.63.0。提交 340287b。
 
 - 依赖（decisions/0002-mcp-sdk.md）：`@modelcontextprotocol/server@2.0.0`（runtime，MIT，2026-07-27；
   2.1.0 发布仅 5 天被 7 天规则弃用）+ `@modelcontextprotocol/client@2.0.0`（dev，测试）。
