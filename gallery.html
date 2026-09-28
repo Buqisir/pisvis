@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pisvis · 视觉候选样板</title>
+    <link rel="stylesheet" href="/playground/style.css" />
+    <link rel="stylesheet" href="/playground/theme.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p>PISVIS / VISUAL CANDIDATES</p>
+        <h1>视觉候选样板</h1>
+        <p>同一组数据、同一套图元；A 为修订中的选定方向，B 留作对照。<a href="./index.html">← 返回向量实验台</a></p>
+        <p class="banner" role="note">A v2 为当前默认主题（暂定，后续可能修订）；B 为候选对照。文档以主题 id+版本号为准。</p>
+      </header>
+      <form id="gallery-controls" class="workspace-controls" aria-label="样板控制">
+        <fieldset>
+          <legend>主题</legend>
+          <label><input id="theme-a" type="radio" name="theme" value="a" checked /> A 轻质感科学插画 · 当前默认（暂定）</label>
+          <label><input id="theme-b" type="radio" name="theme" value="b" /> B 精密清爽线描 · 候选</label>
+          <label><input id="theme-both" type="radio" name="theme" value="both" /> 并排对比</label>
+        </fieldset>
+        <fieldset>
+          <legend>检查</legend>
+          <label><input id="opt-gray" type="checkbox" /> 灰度检查</label>
+          <label><input id="opt-motion" type="checkbox" /> 减少动效</label>
+          <label><input id="opt-long" type="checkbox" /> 长标签</label>
+        </fieldset>
+      </form>
+      <div id="scenes" aria-label="场景样板"></div>
+      <footer>样板覆盖图元、状态、向量合成、正交分解与退化边界；标签为固定锚点加人工偏移，尚无自动避让。</footer>
+    </main>
+    <script type="module" src="/playground/gallery.ts"></script>
+  </body>
+</html>

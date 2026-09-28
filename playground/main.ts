@@ -3,6 +3,7 @@ import {
   sub, vec2, worldToScreen,
 } from '../src/index.js';
 import type { Vec2 } from '../src/index.js';
+import { fmt } from './format.js';
 
 function element<T extends HTMLElement>(id: string, kind: { new(): T }): T {
   const found = document.getElementById(id);
@@ -61,12 +62,6 @@ const ENDPOINT_FIELDS: Record<Endpoint, [FieldId, FieldId]> = {
 };
 
 const viewport = () => ({ originPx: ORIGIN, pixelsPerUnit: state.zoom });
-
-/** Display formatting only — never feed the result back into state. */
-function fmt(value: number): string {
-  const rounded = Math.round(value * 1000) / 1000;
-  return String(rounded === 0 ? 0 : rounded);
-}
 
 function directionText(delta: Vec2): string {
   if (magnitude(delta) === 0) return '—';

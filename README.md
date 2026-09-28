@@ -24,6 +24,9 @@ pisvis 是独立的物理可视化库，不是每来一道题就临时生成一�
 | 二维向量运算、长度与单位方向 | 零向量方向返回 null，非有限值明确报错 |
 | 世界坐标与 SVG 逻辑像素双向换算 | 世界 y 向上；仅统一缩放和平移 |
 | 二维仿射变换与求逆（DOMMatrix 同构） | 奇异/近奇异矩阵返回 null，不静默近似 |
+| 主题 token 与 CSS 变量适配 | A v2 `illustrated@2` 为当前默认（provisional）；B `linework@1` 候选；`getTheme` 只认精确 id+版本 |
+| 纯函数场景序列化 renderSceneSvg | 颜色只走 CSS 变量类名；实例 ID 命名空间隔离 |
+| 视口自适应 fitViewport | 统一比例居中，退化范围不崩溃，结果不被裁剪 |
 | 自己计算箭杆与箭头几何 | 支持短箭头/重合端点，不自动判断真实物理力 |
 | 纯函数输出 SVG 字符串 | 无 DOM 依赖，文字转义，不接受任意 SVG/HTML |
 | 实验页：坐标输入、缩放滑块、两端点原生拖动 | 演示层能力，非库 API；无模板保存或自动标签排版 |
@@ -59,7 +62,8 @@ thi.ng 按复杂几何需求评估；PixiJS、Penrose/Bloom、SceneryStack、Typ
 ```sh
 npm ci
 npm run check
-npm run dev          # 或 npm run test:browser 跑 Chromium 交互测试
+npm run dev          # /index.html 实验台；/gallery.html 视觉候选样板
+                     # npm run test:browser 跑 Chromium 交互测试
 ```
 
 仓库含真实 package-lock.json；锁文件存在后始终用 npm ci 复现。

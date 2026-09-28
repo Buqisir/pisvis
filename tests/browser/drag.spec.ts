@@ -275,19 +275,21 @@ test('a second pointer and the secondary mouse button are ignored', async ({ pag
 });
 
 test('keyboard reaches inputs and radios; focus stays visible', async ({ page }) => {
-  const seen: string[] = [];
+  const stops: Array<[string, string]> = [];
   for (let i = 0; i < 9; i++) {
     await page.keyboard.press('Tab');
-    seen.push(await page.evaluate(() => document.activeElement?.id ?? ''));
+    stops.push(await page.evaluate(() => {
+      const el = document.activeElement;
+      return [el?.id ?? '', el ? getComputedStyle(el).outlineStyle : 'none'];
+    }));
   }
   for (const id of ['ax', 'ay', 'bx', 'by', 'zoom', 'sel-end']) {
-    expect(seen).toContain(id);
+    expect(stops.map(([id]) => id)).toContain(id);
   }
 
   // a focused element shows a visible outline (not suppressed)
-  const outline = await page.evaluate(() =>
-    getComputedStyle(document.activeElement!).outlineStyle);
-  expect(outline).not.toBe('none');
+  const axStop = stops.find(([id]) => id === 'ax');
+  expect(axStop?.[1]).not.toBe('none');
 
   // arrow keys move the radio selection to 起点
   await page.locator('#sel-end').focus();

@@ -1,0 +1,5 @@
+/** Display formatting only — never feed the result back into state. */
+export function fmt(value: number): string {
+  const rounded = Math.round(value * 1000) / 1000;
+  return String(rounded === 0 ? 0 : rounded);
+}

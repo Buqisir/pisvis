@@ -103,3 +103,109 @@ GitHub Actions 固定到 v7 系列完整提交 SHA（checkout v7.0.1、setup-nod
 - 无滚轮缩放/平移；缩放范围固定 20–60；标签固定不避让。
 - 方向读数为相对 +x 轴的角度（1 位小数）；零向量显示「—」。
 - 终点实心手柄会部分遮住箭头尖端；留给 M2 视觉样板统一处理。
+
+## E. M2-A 视觉候选记录
+
+日期：2026-09-28（UTC+08）。实现 [Issue #3](https://github.com/Buqisir/pisvis/issues/3) 的 A 部分：
+主题 token、CSS 适配、场景序列化、视口自适应与双候选样板页。提交 f6823be。
+两套主题均为候选，维护者尚未选择。
+
+### 环境
+
+macOS 本机；Node 24.15.0 / npm 11.12.1；TypeScript 6.0.3、Vite 8.3.0、@playwright/test 1.63.0（Chromium build 1243）。
+本轮无新增依赖；核心运行时依赖仍为零。
+
+### 实际执行
+
+- `npm run check`：55 通过 / 0 失败（M1 的 30 + 本轮 theme 10、scene 11、fit 4）。
+- `npm run test:browser`（Chromium）：31 通过 / 0 失败（M1 的 19 + gallery 12，含两主题文本重叠断言）。
+  截图：test-results/screenshots/gallery-{a,b,compare,grayscale,long-labels,mobile}.png（不入库）。
+- `npm run build:demo`：gallery 成为第二个 Vite 页面。产物增量（实测本机构建）：
+  main(dd7194f) 演示页 ≈ index.html 2.2kB + js 8.3kB + css 1.5kB；
+  本分支 index 页 ≈ 18.1kB（共享块把库代码拆出），gallery 页新增 ≈ 21.5kB（gallery.js 17.4kB + css 2.1kB + html 2.0kB）。
+  总量小，无第三方运行时。
+- dist/index.js 的无 DOM 导入测试（kernel.test.mjs「pure renderer imports and runs in Node」）继续通过：
+  theme/scene/fit 均为纯数据与纯函数。
+
+### 本轮新增能力
+
+- `src/theme/tokens.ts`：ThemeDefinition/ColorRole/ColorToken + `checkTheme` 运行时校验（id、版本、色值格式、字号、动效白名单）。
+- `src/theme/themes.ts`：`CANDIDATE_ILLUSTRATED`（soft）与 `CANDIDATE_LINEWORK`（flat），`CANDIDATE_THEMES` 汇总。
+  srgb 值为 OKLCH→sRGB 实测换算；相对起点值修改：A component oklch(62% 0.13 65)→oklch(38% 0.08 62)
+  （与 input/derived 的明度差不足 0.08 且提亮会破坏 3:1 对比度），B component 60%→61%（明度差恰好 0.08 无余量），
+  两主题 focus 彩度 0.16→0.15（原值略超 sRGB 色域 ~1/255）；A component 虚线改 '4 4'、B 改 '5 3'（'1.5 3.5' 在细线宽下几乎不可见）。
+- `src/theme/css.ts`：`themeToCssText(theme, selector)` — sRGB 块在前，`@supports` 升级 OKLCH；选择器与全部 token 严格白名单。
+- `src/render/scene.ts`：`renderSceneSvg` — axes/arrow/point/segment、角色与状态类名、实例命名空间 id、
+  url(#) 局部引用、零向量 pv-zero、错误态非纯色彩提示（衬底虚线）、手柄（readonly 无）、转义标签（≤200 字符）。
+- `src/render/escape.ts`：xml 转义从 svg.ts 抽出共享（svg.ts 行为不变）。
+- `src/core/fit.ts`：`fitViewport` 统一比例适配，退化范围按 1 世界单位处理。
+- `gallery.html` + `playground/gallery.ts` + `playground/theme.css`：四节样板——图元/状态为独立小格（HTML 图注，
+  不与坐标轴混排），退化与边界拆为四个独立面板，合成/分解为大图（720px 级，stage 填满卡宽）；
+  主题单选与并排对比（≥1100px 双列）、灰度/减少动效/长标签开关、HTML 读数面板（与图形同源数据）。
+- 标签定位：end 锚点沿箭头方向越出 tip；mid 锚点在水平项放下侧、竖直项放左侧、斜向取垂足侧；
+  带手柄项的有效偏移至少越过手柄外环；刻度数字跳过轴线交点的斜角格。浏览器断言默认标签下
+  同一 svg 内任意两个 text 的 bbox 互不重叠（A/B 主题均验）。
+- `playground/format.ts`：fmt 抽出共享；vite.config.mjs 改多页构建；index.html 页头加样板链接。
+
+### 已修正的实现问题
+
+- scene 重复 id 校验曾误用 `Set.add` 返回值（恒真），改为 `has` + `add`。
+- M1 键盘测试补链接受影响的断言方式（页头新增样板链接后 Tab 顺序多一站）。
+
+### 未验证 / 已知限制
+
+- 浏览器仅 Chromium；Firefox/WebKit、真实触摸、OKLCH 不支持环境下的 sRGB 降级路径未在旧浏览器实测。
+- 长标签以固定锚点+人工偏移适配，无自动避让；CI（无中文字体包）可能与本机字形不同。
+- tick 数字仅在 B（线描）显示；A 隐藏刻度文字。灰度只是检查开关，非打印管线。
+- 主题切换几何不变的前提是两主题共用同一适配 margin（取两主题 safeMargin 最大值 36px）。
+
+### E.2 候选 C 与动效
+
+2026-09-28（UTC+08）追加：维护者看过 A/B 后要求更“科技感”的方向——深色仪器感候选 C
+（material: 'glow'）与纯 CSS/WAAPI 动效层，无新增依赖。
+
+- 主题数据：`ThemeDefinition.text` 新增 `numericFamily`（三套主题同栈，等宽数字用于刻度与读数）；
+  `material` 扩为 `'soft' | 'flat' | 'glow'`。C 的 input 由 oklch(84% 0.13 200) 调至 oklch(86% 0.13 200)
+  ——原值与 component 明度差仅 0.07（要求 ≥0.08），调后 0.09，对比度 13.06:1，srgb 仍在色域内。
+- 序列化：glow 主题输出命名空间隔离的 `feGaussianBlur` 滤镜（input/derived/component 箭头、点、手柄点）；
+  grid 时额外输出半格细线（pv-gridline-minor）；soft/flat 输出不变。C 选中环有 2.4s 呼吸脉冲
+  （pv-breathe），减少动效（媒体查询或 .pv-reduced-motion）下关闭。
+- 动效层在 `playground/motion.ts` + `gallery.ts`，演示层专用：IntersectionObserver 每个格子入场一次
+  （标记后跨重渲染不重播；「重播」按钮先取消场内动画再重放，不叠加）；场景一「联动演示」用 rAF 让
+  B 沿圆周漂移（~6s 周期），逐帧经同一渲染管线重画并更新读数；暂停/复位/主题切换/可见性隐藏都
+  干净停环。减少动效时无入场、演示不自动开始且按钮禁用。窗口上暴露 `__pvDemo` 计数用于测试。
+- 单选 C 时整页转暗（`body[data-pv-page="dark"]`，读数变为半透明仪表板）；并排对比为三主题，
+  宽屏 ≥1500px 三列、≥1100px 两列、以下纵向堆叠。
+- 验证：`npm run check` 61 通过；`npm run test:browser` 43 通过（M1 19 + gallery 24，含入口动画
+  终态=静态渲染、双主题重叠断言扩至 C、联动 R=A+B 读数与 SVG 一致性、播放中切主题恰好一条 rAF
+  循环、快速两次重播不叠加）。截图含 gallery-c.png、gallery-c-mobile.png（暗色整页）。
+- demo-dist 体积：gallery 页约 26.8kB（js 24.2kB + css 2.5kB + html 2.1kB），较 E 节时 +5.3kB。
+- 复审修正：非 soft 材质补上 pv-head/pv-dot 角色填充（C 的箭头曾默认黑色）；单主题模式
+  stage-pair 固定单列（多列网格仅 :has 多个变体时启用），stage 最大 880px；单元格/面板网格
+  最小宽调整为不缩小 svg（刻度有效字号 ≥12.5px，浏览器断言三套主题验证）。
+- 已知限制：仍仅 Chromium；C 的辉光在投影/打印下未验证（投影与打印请用浅色主题）；动效与呼吸
+  脉冲未在 Firefox/WebKit 实测；visibilitychange 恢复路径由代码实现但浏览器测试未覆盖真隐藏。
+
+### E.3 维护者反馈与 A v2
+
+2026-09-28（UTC+08）维护者反馈 PR #7：选定 A「轻质感科学插画」为方向，要求去掉“塑料感”、
+更轻更透气，不要深色主题。本补丁移除候选 C（深色仪器感/glow 材质/暗色页/呼吸脉冲全部撤出），
+A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
+
+- A v2 token：paper oklch(98.6% 0.008 85)；角色 input/derived/component 明度序 0.63/0.45/0.54
+  （ΔL 0.09/0.18/0.09，≥0.08）；component 由深铜 oklch(38% 0.08 62) 改柔和赭 oklch(54% 0.11 50)；
+  线宽 main 3→2 / aux 2→1.4 / axis 1.5→1.2 / grid 1→0.75；箭头 16×12→13×9；点 r5→4、手柄 8→7；
+  刻度/读数 14→13；动效 260ms cubic-bezier(0.25,0.8,0.25,1)。全部满足既有对比度/明度差/色域测试。
+- 序列化收窄：渐变 defs、点纹理、halo 圆、发光滤镜、半格细网格全部移除——soft 材质现在仅表示
+  圆头线帽 + 手柄点后 10% 淡 halo；输出不再含 <defs> 或 url(#) 引用。
+- 标签：`SceneLabel.style: 'variable'|'text'`；数学单字母用斜体衬线（pv-label-var），中文用正文。
+- 验证：`npm run check` 57 通过；`npm run test:browser` 39 通过（M1 19 + gallery 20）。
+  新增断言：每主题所有 pv-head/pv-dot/pv-handle-dot/pv-zero/pv-axis-head 计算填充为角色/坐标轴色
+  或渐变，绝不默认黑/无填充；有效字号 ≥12.5px。
+- 截图重生成 gallery-{a,b,compare,grayscale,long-labels,mobile}.png；gallery-c* 已删除。
+- demo-dist gallery 页 ≈26.8kB（js 24.2 + css 2.55 + html 2.1），与 E.2 基本持平。
+- 追加（2026-09-28）：维护者决定先用 A v2——导出改名 THEMES/THEME_ILLUSTRATED/THEME_LINEWORK +
+  `DEFAULT_THEME` + `getTheme(id,version)`（仅精确匹配）；status 枚举扩为 'candidate'|'provisional'，
+  A v2 为 provisional。npm run check 61 通过、test:browser 39 通过。
+  追加：合并前主题 id 去掉 candidate- 前缀——`illustrated@2` / `linework@1`（版本不变），
+  尚无存档文档引用旧 id。

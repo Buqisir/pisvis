@@ -3,6 +3,7 @@ import type { Viewport } from '../core/viewport.js';
 import { positive } from '../math/vec2.js';
 import type { Vec2 } from '../math/vec2.js';
 import { buildArrow } from '../primitives/arrow.js';
+import { xml } from './escape.js';
 
 export interface ArrowSvgOptions {
   readonly start: Vec2;
@@ -11,15 +12,6 @@ export interface ArrowSvgOptions {
   readonly widthPx: number;
   readonly heightPx: number;
   readonly label?: string;
-}
-
-function xml(text: string): string {
-  // Reject characters XML 1.0 cannot represent; never accept raw SVG/HTML markup.
-  if (/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u.test(text)) {
-    throw new RangeError('label contains an invalid XML character');
-  }
-  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
 }
 
 /** Pure SVG serialization. No DOM access, IDs, fonts, network, scripts or foreignObject. */
