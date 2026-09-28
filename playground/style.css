@@ -85,6 +85,12 @@ form select, .row select { font: inherit; padding: 4px; }
 .p-readout { font-size: 13px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; margin: 6px 0; }
 .q-steps { font-size: 13px; color: #47585e; padding-left: 22px; margin: 8px 0 0; }
 .q-steps li { margin: 2px 0; }
+.page-toolbar { display: flex; gap: 18px; align-items: center; font-size: 14px; margin: 16px 0 -8px; }
+.page-toolbar label { display: inline-flex; gap: 8px; align-items: center; margin: 0; }
+.qp-formula { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 14px; margin: 14px 0 6px; padding: 10px 12px; background: #fbfcfb; border: 1px solid #e3e8e9; border-radius: 8px; }
+.f-item { font-size: 14px; min-width: 0; overflow-x: auto; }
+.f-item .f-tex .katex { font-size: 1.02em; }
+.f-item.f-na { font-size: 12px; color: #8a6d3b; }
 @media (max-width: 960px) { #panels { grid-template-columns: 1fr; } }
 
 

@@ -11,12 +11,15 @@
       <header><p>PISVIS / M3 QUESTION TYPE</p><h1>平抛运动 · 题型演示</h1>
         <p>三块原创平抛题共用 horizontal-projectile@1 情境图与 projectile-speed-graph@1 v–t 图；
         每块题板独立会话，互不污染。<a href="./index.html">← 向量实验台</a></p></header>
+      <div class="page-toolbar">
+        <label><input type="checkbox" id="opt-motion" /> 减少动效（教学演示直接呈现终态；播放不受影响）</label>
+      </div>
       <div id="panels"></div>
       <p class="note">原题模式锁定题设 h/u/g（时间 t 与主题仍可动）；点「修改条件」进入探索模式后改动会标出，
       「恢复原题」随时回到题面数值。播放按解析式推进 t，落地精确停在 T，不切后台跳帧。
-      游标、小球、读数与公式（后续接入）都指向同一时刻的同一份有效快照。</p>
+      游标、小球、读数与公式面板都指向同一时刻的同一份有效快照；「讲解演示」只做容器级强调，不碰物理几何。</p>
       <footer>题型实例与运行态分离（REUSE_AND_BINDINGS §1）；同一份文档经同一校验边界驱动所有视图。
-      公式面板与教学动效属 m3-presentation 切片，未在本页启用。</footer>
+      公式经注册 id 由 KaTeX 适配层排版（trust:false），教学动效经 motion/mini 适配层，物理推进不依赖两者。</footer>
     </main>
     <script type="module" src="/playground/projectile.ts"></script>
   </body>

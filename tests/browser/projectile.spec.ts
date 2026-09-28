@@ -6,7 +6,7 @@ interface PanelSnap {
   mode: string;
   modifiedParams: string[];
   params: Record<string, number>;
-  derived: Record<string, number>;
+  derived: Record<string, unknown>;
   graphParams: Record<string, number>;
 }
 const snaps = (page: import('@playwright/test').Page) =>
@@ -123,6 +123,61 @@ test('projectile page: playback lands exactly at T; switching questions rebuilds
   const ids = await page.evaluate(() =>
     [...document.querySelectorAll('svg title[id]')].map((el) => el.id));
   expect(new Set(ids).size).toBe(ids.length);
+});
+
+test('projectile page: formula panel tracks the same t; u=0 shows precondition text', async ({
+  page,
+}) => {
+  await page.goto('/projectile.html');
+  const a = page.locator('[data-panel="p-a"]');
+  const formula = a.locator('.qp-formula');
+
+  // 10 registered formulas render KaTeX (or an explicit not-applicable note).
+  await expect(formula.locator('.f-item')).toHaveCount(10);
+  await expect(formula.locator('.f-item .katex').first()).toBeVisible();
+  const vyItem = formula.locator('.f-item[data-formula="vy"]');
+  await expect(vyItem).toContainText('0'); // vy = -g·0 = 0 at t=0
+
+  // Scrub t: formulas re-render off the same snapshot (vy = -10·1.5 = -15).
+  await a.locator('.in-t').fill('1.5');
+  await expect(vyItem).toContainText('15');
+  const [s] = await snaps(page);
+  expect(s.derived.velocity).toEqual({ x: 10, y: -15 });
+
+  // u=0 free fall: ÷u formulas degrade to an honest not-applicable note,
+  // not a fake result.
+  await a.locator('.q-unlock').click();
+  await a.locator('.in-u').fill('0');
+  await a.locator('.in-u').dispatchEvent('change');
+  await expect(formula.locator('.f-item.f-na')).toHaveCount(2); // traj + tan-alpha
+  await expect(formula.locator('.f-item[data-formula="traj"]')).toContainText('u=0');
+});
+
+test('projectile page: teaching sequence runs and cancels; reduced motion applies instantly', async ({
+  page,
+}) => {
+  await page.goto('/projectile.html');
+  const a = page.locator('[data-panel="p-a"]');
+  const teach = a.locator('.q-teach');
+
+  // Normal run: button toggles to stop; container gets animated in ~1.05s.
+  await teach.click();
+  await expect(teach).toHaveText('停止讲解');
+  await expect(teach).toHaveText('讲解演示', { timeout: 4000 });
+
+  // Reduced motion: the whole sequence lands synchronously — no in-flight.
+  await page.locator('#opt-motion').check();
+  await teach.click();
+  await expect(a.locator('[data-view="scene"]')).toHaveCSS('opacity', '1');
+  await expect(teach).toHaveText('讲解演示', { timeout: 1500 });
+
+  // Start a run and switch question mid-flight: the run is cancelled,
+  // the panel rebuilds cleanly with the button reset.
+  await page.locator('#opt-motion').uncheck();
+  await teach.click();
+  await a.locator('.q-select').selectOption('q-range');
+  await expect(teach).toHaveText('讲解演示');
+  await expect(a.locator('.p-readout')).toHaveText(/t = 0 s \/ T = 2 s/);
 });
 
 test('projectile page: live documents validate through authoring boundary', async ({ page }) => {

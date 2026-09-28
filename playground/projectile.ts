@@ -1,4 +1,8 @@
+import 'katex/dist/katex.min.css';
 import { authoring } from '../src/agent.js';
+import { listFormulas, renderFormula } from '../src/formula/index.js';
+import { prefersReducedMotion, runTeachingSequence } from '../src/motion/index.js';
+import type { TeachingSequence } from '../src/motion/index.js';
 import { flightTime } from '../src/models/projectile.js';
 import { PROJECTILE_QUESTIONS } from '../src/questions/projectile.js';
 import {
@@ -26,6 +30,7 @@ const PANEL_HTML = `
     <span class="mode-badge" aria-live="polite"></span>
     <button type="button" class="q-unlock">修改条件</button>
     <button type="button" class="q-restore" hidden>恢复原题</button>
+    <button type="button" class="q-teach">讲解演示</button>
   </div>
   <p class="q-goal"></p>
   <div class="qp-view stage" data-view="scene"></div>
@@ -57,9 +62,12 @@ const PANEL_HTML = `
       </div>
     </div>
   </form>
-  <p class="p-status" role="status" aria-live="polite"></p>
-  <p class="p-readout"></p>
-  <ol class="q-steps"></ol>
+  <div class="qp-extras">
+    <div class="qp-formula" aria-label="公式面板"></div>
+    <p class="p-status" role="status" aria-live="polite"></p>
+    <p class="p-readout"></p>
+    <ol class="q-steps"></ol>
+  </div>
 `;
 
 function pick<T extends HTMLElement>(root: HTMLElement, sel: string, kind: { new(): T }): T {
@@ -115,12 +123,18 @@ class ProjectilePanel {
     status: HTMLParagraphElement;
     readout: HTMLParagraphElement;
     steps: HTMLOListElement;
+    teach: HTMLButtonElement;
+    formula: HTMLDivElement;
+    extras: HTMLDivElement;
   };
+
+  private teachRun: TeachingSequence | null = null;
 
   constructor(
     root: HTMLElement,
     private readonly slot: string,
     initialQuestionId: string,
+    private readonly reducedMotion: () => boolean,
   ) {
     root.innerHTML = PANEL_HTML;
     this.els = {
@@ -142,6 +156,9 @@ class ProjectilePanel {
       status: pick(root, '.p-status', HTMLParagraphElement),
       readout: pick(root, '.p-readout', HTMLParagraphElement),
       steps: pick(root, '.q-steps', HTMLOListElement),
+      teach: pick(root, '.q-teach', HTMLButtonElement),
+      formula: pick(root, '.qp-formula', HTMLDivElement),
+      extras: pick(root, '.qp-extras', HTMLDivElement),
     };
     for (const q of PROJECTILE_QUESTIONS) {
       const opt = document.createElement('option');
@@ -187,6 +204,25 @@ class ProjectilePanel {
       this.mirrorToGraph(ops);
       this.draw();
     });
+    this.els.teach.addEventListener('click', () => {
+      if (this.teachRun !== null) {
+        this.teachRun.cancel();
+        this.teachRun = null;
+        this.els.teach.textContent = '讲解演示';
+        return;
+      }
+      // Container-level emphasis only: physics geometry is owned by the
+      // document/render path and the playback clock, never by easing.
+      this.teachRun = runTeachingSequence(
+        { scene: this.els.sceneView, vectors: this.els.graphView, panels: this.els.extras },
+        { reduced: this.reducedMotion() },
+      );
+      this.els.teach.textContent = '停止讲解';
+      void this.teachRun.finished.then(() => {
+        this.teachRun = null;
+        this.els.teach.textContent = '讲解演示';
+      });
+    });
     this.els.restore.addEventListener('click', () => {
       this.stopClock();
       const r = sessionRestoreOriginal(this.session);
@@ -205,6 +241,9 @@ class ProjectilePanel {
     const q = PROJECTILE_QUESTIONS.find((item) => item.id === id);
     if (q === undefined) return;
     this.stopClock();
+    this.teachRun?.cancel();
+    this.teachRun = null;
+    this.els.teach.textContent = '讲解演示';
     if (this.session !== undefined) sessionDestroy(this.session);
     const created = createSession(q, authoring, { instanceId: `${this.slot}-${q.id}` });
     if (!created.ok) {
@@ -263,10 +302,32 @@ class ProjectilePanel {
     this.els.status.textContent = e !== undefined ? `${e.message}${e.hint ? ` ${e.hint}` : ''}` : '修改被拒绝';
   }
 
+  /** 公式面板：已注册公式 id + 当前快照参数；渲染失败显示结构化原因。 */
+  private drawFormulas(): void {
+    const values = { ...this.session.document.params };
+    this.els.formula.replaceChildren(...listFormulas().map((f) => {
+      const item = document.createElement('div');
+      item.className = 'f-item';
+      item.dataset.formula = f.id;
+      const r = renderFormula(f.id, values);
+      if (r.ok) {
+        const body = document.createElement('span');
+        body.className = 'f-tex';
+        body.innerHTML = r.html; // KaTeX output only — user/agent text never reaches it
+        item.append(body);
+      } else {
+        item.classList.add('f-na');
+        item.textContent = `${f.name} — ${r.errors[0]?.message ?? '不适用'}`;
+      }
+      return item;
+    }));
+  }
+
   private draw(): void {
     this.els.status.textContent = '';
     renderInto(this.els.sceneView, this.session.document, this.els.status);
     renderInto(this.els.graphView, this.graphDoc, this.els.status);
+    this.drawFormulas();
 
     const mode = this.session.mode;
     const modified = this.session.modifiedParams;
@@ -379,6 +440,8 @@ class ProjectilePanel {
 
   destroy(): void {
     this.stopClock();
+    this.teachRun?.cancel();
+    this.teachRun = null;
     if (this.session !== undefined && !this.session.destroyed) sessionDestroy(this.session);
   }
 
@@ -406,13 +469,17 @@ class ProjectilePanel {
 
 const panelsRoot = document.getElementById('panels');
 if (panelsRoot === null) throw new Error('Missing #panels');
+const optMotion = document.getElementById('opt-motion');
+if (!(optMotion instanceof HTMLInputElement)) throw new Error('Missing #opt-motion');
+// OS 偏好初始值；勾选后任何教学演示都直接落到终态（播放不受影响——t 是物理时间）。
+optMotion.checked = prefersReducedMotion();
 const panels: ProjectilePanel[] = [];
 for (const [slot, qid] of [['p-a', 'q-landing-time'], ['p-b', 'q-range']] as const) {
   const el = document.createElement('section');
   el.className = 'qpanel';
   el.dataset.panel = slot;
   panelsRoot.append(el);
-  panels.push(new ProjectilePanel(el, slot, qid));
+  panels.push(new ProjectilePanel(el, slot, qid, () => optMotion.checked));
 }
 
 document.addEventListener('visibilitychange', () => {
