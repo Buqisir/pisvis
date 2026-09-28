@@ -20,7 +20,9 @@ export interface SceneDocument {
     readonly canvas: { readonly width: number; readonly height: number };
     readonly viewport:
       | { readonly mode: 'fit' }
-      | { readonly mode: 'explicit'; readonly originPx: Vec2; readonly pixelsPerUnit: number };
+      | { readonly mode: 'explicit'; readonly originPx: Vec2; readonly pixelsPerUnit: number }
+      /** Function graphs: x/y scale independently — never for physical geometry. */
+      | { readonly mode: 'stretch' };
   };
 }
 

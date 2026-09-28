@@ -21,7 +21,7 @@
         "height": 360
       },
       "viewport": {
-        "mode": "fit"
+        "mode": "stretch"
       }
     }
   },

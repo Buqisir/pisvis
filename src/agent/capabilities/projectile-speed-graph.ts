@@ -63,12 +63,12 @@ function scene(
     {
       kind: 'path', id: 'vx-line', role: 'component',
       points: [vec2(0, p.u), vec2(T, p.u)],
-      label: { text: 'vx', anchor: 'mid', offsetPx: { x: 0, y: -12 }, style: 'variable' },
+      label: { text: 'vx', anchor: 'mid', offsetPx: { x: 28, y: -12 }, style: 'variable' },
     },
     {
       kind: 'path', id: 'vy-line', role: 'derived',
       points: [vec2(0, 0), vec2(T, -p.g * T)],
-      label: { text: 'vy', anchor: 'mid', offsetPx: { x: 14, y: 0 }, style: 'variable' },
+      label: { text: 'vy', anchor: 'mid', offsetPx: { x: 34, y: 0 }, style: 'variable' },
     },
   ];
   // zero-length guides render as nothing — keep the points, drop the segment
@@ -78,14 +78,17 @@ function scene(
       from: vec2(tc, vxT), to: vec2(tc, vyT), dashed: true,
     });
   }
+  // 'mid' anchors sit above the point; push the text inward so t=0 and t=T
+  // don't clip at the canvas edges.
+  const inward = tc < T / 2 ? 26 : -26;
   items.push(
     {
       kind: 'point', id: 'vx-t', role: 'input', at: vec2(tc, vxT),
-      label: { text: 'vx(t)', anchor: 'mid', offsetPx: { x: 0, y: -6 }, style: 'variable' },
+      label: { text: 'vx(t)', anchor: 'mid', offsetPx: { x: inward, y: -4 }, style: 'variable' },
     },
     {
       kind: 'point', id: 'vy-t', role: 'input', at: vec2(tc, vyT),
-      label: { text: 'vy(t)', anchor: 'end', offsetPx: { x: 6, y: 0 }, style: 'variable' },
+      label: { text: 'vy(t)', anchor: 'mid', offsetPx: { x: inward, y: -2 }, style: 'variable' },
     },
   );
   return items;
@@ -141,7 +144,9 @@ export const projectileSpeedGraphV1: CapabilityDefinition = Object.freeze({
     presentation: {
       theme: { id: 'illustrated', version: 2 },
       canvas: { width: 640, height: 360 },
-      viewport: { mode: 'fit' as const },
+      // stretch：t 与 v 量纲不同，必须两轴独立刻度映射才读得动；
+      // 图内长度不携带物理语义（情境图仍用等比例 fit）。
+      viewport: { mode: 'stretch' as const },
     },
   },
   examples: {
@@ -157,7 +162,7 @@ export const projectileSpeedGraphV1: CapabilityDefinition = Object.freeze({
         presentation: {
           theme: { id: 'illustrated', version: 2 },
           canvas: { width: 640, height: 360 },
-          viewport: { mode: 'fit' },
+          viewport: { mode: 'stretch' },
         },
       },
       operations: [
