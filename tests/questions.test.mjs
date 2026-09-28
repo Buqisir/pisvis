@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PROJECTILE_QUESTIONS } from '../dist/questions/projectile.js';
 import {
-  createSession, sessionDestroy, sessionRestoreOriginal,
+  createSession, sessionApply, sessionDestroy, sessionRestoreOriginal,
   sessionSetTime, sessionUpdateParams,
 } from '../dist/questions/session.js';
 
@@ -110,6 +110,20 @@ test('restore applies original params (including t) and returns to original mode
   assert.equal(s.document.params.g, 10);
   assert.equal(s.document.params.t, 0);
   assert.equal(s.derived.R, 30);
+});
+
+test('sessionApply: non-condition ops keep mode, editable ops flip to explore', () => {
+  const s = sessionOf(byId['q-range']);
+  const themed = sessionApply(s, [
+    { op: 'set-theme', value: { id: 'linework', version: 1 } },
+  ]);
+  assert.ok(themed.ok, JSON.stringify(themed.errors));
+  assert.equal(s.mode, 'original');
+  assert.equal(s.document.presentation.theme.id, 'linework');
+  const edited = sessionApply(s, [{ op: 'set-h', value: 30 }]);
+  assert.ok(edited.ok);
+  assert.equal(s.mode, 'explore');
+  assert.deepEqual(s.modifiedParams, ['h']);
 });
 
 // ---- failure keeps last valid state ----------------------------------------------------

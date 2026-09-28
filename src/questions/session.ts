@@ -67,6 +67,17 @@ function fail(code: SessionError['code'], message: string): SessionFailure {
   return { ok: false, errors: [{ code, path: 'session', message }] };
 }
 
+/** set-<key> 操作触及的题设字段名（editableParams 的交集）。 */
+function touchedEditable(
+  instance: QuestionInstance,
+  operations: readonly SceneOperation[],
+): boolean {
+  return operations.some((o) => {
+    const key = o.op.startsWith('set-') ? o.op.slice(4) : '';
+    return instance.editableParams.includes(key);
+  });
+}
+
 /** 先校验完整候选再原子提交：成功后替换 document/derived 并回调模式簿记。 */
 function mutate(
   session: QuestionSession,
@@ -80,6 +91,10 @@ function mutate(
   if (!r.ok) return r;
   st.document = r.document;
   st.derived = r.derived;
+  if (st.mode === 'original' && touchedEditable(session.instance, operations)) {
+    st.mode = 'explore';
+  }
+  st.modifiedParams = Object.freeze(diverged(session.instance, st.document));
   onSuccess?.(st);
   return r;
 }
@@ -149,13 +164,18 @@ export function sessionUpdateParams(
     const value = patch[key];
     if (value !== undefined) operations.push({ op: `set-${key}`, value });
   }
-  const touchesEditable = PARAM_KEYS.some(
-    (k) => patch[k] !== undefined && session.instance.editableParams.includes(k),
-  );
-  return mutate(session, operations, (st) => {
-    if (st.mode === 'original' && touchesEditable) st.mode = 'explore';
-    st.modifiedParams = Object.freeze(diverged(session.instance, st.document));
-  });
+  return mutate(session, operations);
+}
+
+/**
+ * 通用操作通道：set-theme/set-labels 这类非题设操作也走同一条校验边界；
+ * 触及 editableParams 的 set-<key> 同样触发原题→探索切换。
+ */
+export function sessionApply(
+  session: QuestionSession,
+  operations: readonly SceneOperation[],
+): SessionMutatorResult {
+  return mutate(session, operations);
 }
 
 /** 恢复原题：把 instance.params（含 t）整体写回，回到原题模式并清空已改标记。 */
