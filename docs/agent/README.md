@@ -16,6 +16,11 @@
   派生 r/rLength/rDirection。
 - `vector-decompose@1`（math-diagram）：向量正交分解到坐标轴。输入 v/label，
   派生 vx/vy/length/direction。
+- `horizontal-projectile@1`（physics-model，SI）：高度 h 处以水平初速度 u 抛出的
+  平抛情境图。输入 h/u/g/t，派生 position/velocity/T/R/落点等；时间域 [0,T]。
+- `projectile-speed-graph@1`（physics-model，SI）：同一平抛快照的 v–t 函数图
+  （vx 常量线、vy=−gt 斜线、t 游标）。与 horizontal-projectile 共用同一
+  params Schema；用作同一题目的第二视图。
 
 均输出规范化场景文档、自包含 SVG 与检查报告。发现更多能力 →
 `pisvis_list_capabilities` / `pisvis capabilities`。
@@ -28,5 +33,7 @@
 
 ## 边界
 
-无量纲数学示意；`checks.physics` 恒 `not_applicable`（不做受力分析）；
+math-diagram 能力为无量纲数学示意，`checks.physics` 为 `not_applicable`；
+physics-model 能力按注册模型卡校验（`checks.physics` 可为 `passed`），
+但不覆盖未注册的物理情形，不做受力分析。
 不执行任意代码，不访问文件系统（除 CLI 显式文件参数），无网络依赖。

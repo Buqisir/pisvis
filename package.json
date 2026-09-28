@@ -16,6 +16,10 @@
     "./agent": {
       "types": "./dist/agent.d.ts",
       "import": "./dist/agent.js"
+    },
+    "./questions": {
+      "types": "./dist/questions/index.d.ts",
+      "import": "./dist/questions/index.js"
     }
   },
   "files": [

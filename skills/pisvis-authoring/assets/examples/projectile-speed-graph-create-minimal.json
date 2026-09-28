@@ -1,0 +1,10 @@
+{
+  "templateId": "projectile-speed-graph",
+  "templateVersion": 1,
+  "params": {
+    "h": 20,
+    "u": 10,
+    "g": 10,
+    "t": 1
+  }
+}

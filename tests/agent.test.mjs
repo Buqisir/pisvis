@@ -201,14 +201,14 @@ test('render twice gives identical svg; theme/canvas/viewport do not change deri
 
 test('listCapabilities: short catalog, stable order, keyword filter', () => {
   const all = authoring.listCapabilities();
-  assert.equal(all.total, 4);
+  assert.equal(all.total, 5);
   assert.deepEqual(all.items.map((i) => i.id),
-    ['arrow', 'horizontal-projectile', 'vector-add', 'vector-decompose']);
+    ['arrow', 'horizontal-projectile', 'projectile-speed-graph', 'vector-add', 'vector-decompose']);
   assert.equal(authoring.listCapabilities({ keyword: '向量' }).total, 3);
   assert.equal(authoring.listCapabilities({ keyword: 'vector' }).total, 3);
   assert.equal(authoring.listCapabilities({ keyword: '分解' }).total, 2);
-  assert.equal(authoring.listCapabilities({ keyword: '平抛' }).total, 1);
-  assert.equal(authoring.listCapabilities({ kind: 'physics-model' }).total, 1);
+  assert.equal(authoring.listCapabilities({ keyword: '平抛' }).total, 2);
+  assert.equal(authoring.listCapabilities({ kind: 'physics-model' }).total, 2);
   assert.equal(authoring.listCapabilities({ kind: 'math-diagram' }).total, 3);
   assert.equal(authoring.listCapabilities({ kind: 'physics-template' }).total, 0);
 });
@@ -236,7 +236,7 @@ test('describeCapability returns schemas, constraints and runnable examples', ()
   const unk = authoring.describeCapability({ id: 'nope', version: 1 });
   assert.equal(unk.errors[0].code, 'unknown-capability');
   assert.deepEqual(unk.errors[0].allowedValues,
-    ['arrow', 'horizontal-projectile', 'vector-add', 'vector-decompose']);
+    ['arrow', 'horizontal-projectile', 'projectile-speed-graph', 'vector-add', 'vector-decompose']);
 });
 
 test('registry extensibility: a test-only capability flows through unchanged', () => {

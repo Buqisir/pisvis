@@ -1,5 +1,6 @@
 import { arrowV1 } from './capabilities/arrow.js';
 import { horizontalProjectileV1 } from './capabilities/horizontal-projectile.js';
+import { projectileSpeedGraphV1 } from './capabilities/projectile-speed-graph.js';
 import { vectorAddV1 } from './capabilities/vector-add.js';
 import { vectorDecomposeV1 } from './capabilities/vector-decompose.js';
 import type { CapabilityDefinition } from './types.js';
@@ -12,6 +13,7 @@ import type { CapabilityDefinition } from './types.js';
 export const CAPABILITY_REGISTRY: readonly CapabilityDefinition[] = Object.freeze([
   arrowV1,
   horizontalProjectileV1,
+  projectileSpeedGraphV1,
   vectorAddV1,
   vectorDecomposeV1,
 ]);

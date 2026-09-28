@@ -1,0 +1,34 @@
+{
+  "document": {
+    "schemaVersion": 1,
+    "instanceId": "projectile-speed-graph-example",
+    "templateId": "projectile-speed-graph",
+    "templateVersion": 1,
+    "unit": "si",
+    "params": {
+      "h": 20,
+      "u": 10,
+      "g": 10,
+      "t": 1
+    },
+    "presentation": {
+      "theme": {
+        "id": "illustrated",
+        "version": 2
+      },
+      "canvas": {
+        "width": 640,
+        "height": 360
+      },
+      "viewport": {
+        "mode": "fit"
+      }
+    }
+  },
+  "operations": [
+    {
+      "op": "set-t",
+      "value": 0.5
+    }
+  ]
+}
