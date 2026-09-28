@@ -1,0 +1,47 @@
+{
+  "document": {
+    "schemaVersion": 1,
+    "instanceId": "vector-add-example",
+    "templateId": "vector-add",
+    "templateVersion": 1,
+    "unit": "dimensionless",
+    "params": {
+      "a": {
+        "x": 2,
+        "y": 1
+      },
+      "b": {
+        "x": 0.5,
+        "y": 1.8
+      }
+    },
+    "presentation": {
+      "theme": {
+        "id": "illustrated",
+        "version": 2
+      },
+      "canvas": {
+        "width": 640,
+        "height": 360
+      },
+      "viewport": {
+        "mode": "fit"
+      }
+    }
+  },
+  "operations": [
+    {
+      "op": "set-b",
+      "value": {
+        "x": -1,
+        "y": 0.5
+      }
+    },
+    {
+      "op": "set-labels",
+      "value": {
+        "r": "R合"
+      }
+    }
+  ]
+}

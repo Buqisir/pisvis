@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, cpSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { authoring, arrowV1, ERROR_CODES, ERROR_DOCS } from '../dist/agent.js';
+import { authoring, CAPABILITY_REGISTRY, ERROR_CODES, ERROR_DOCS } from '../dist/agent.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SKILL = join(ROOT, 'skills/pisvis-authoring');
@@ -30,16 +30,18 @@ const pretty = (o) => JSON.stringify(o, null, 2) + '\n';
 
 const files = new Map(); // path -> content
 
-// -- assets/examples ---------------------------------------------------------
-files.set(join(SKILL, 'assets/examples/create-minimal.json'),
-  pretty(arrowV1.examples.minimal));
-files.set(join(SKILL, 'assets/examples/update-variant.json'),
-  pretty(arrowV1.examples.variant));
-files.set(join(SKILL, 'assets/examples/failure-missing-end.json'), pretty({
-  request: arrowV1.examples.failure.request,
-  expectedCode: arrowV1.examples.failure.expectedCode,
-  fix: arrowV1.examples.failure.fix,
-}));
+// -- assets/examples (one trio per registered capability) ----------------------
+for (const cap of CAPABILITY_REGISTRY) {
+  files.set(join(SKILL, `assets/examples/${cap.id}-create-minimal.json`),
+    pretty(cap.examples.minimal));
+  files.set(join(SKILL, `assets/examples/${cap.id}-update-variant.json`),
+    pretty(cap.examples.variant));
+  files.set(join(SKILL, `assets/examples/${cap.id}-failure.json`), pretty({
+    request: cap.examples.failure.request,
+    expectedCode: cap.examples.failure.expectedCode,
+    fix: cap.examples.failure.fix,
+  }));
+}
 
 // -- generated blocks in references -------------------------------------------
 const toolsBlock = [

@@ -30,6 +30,8 @@ A1-3 交付 playground 经同一 API 边界编辑场景文档 + Issue §2 文档
 ## M2：统一视觉 + 数学模板复用
 
 执行 [Issue #3](https://github.com/Buqisir/pisvis/issues/3)，依赖 A1 契约；视觉样板部分（PR #7）已完成。
+模板部分进行中：vector-add@1（平行四边形合成）与 vector-decompose@1（正交分解）已按 A1 文档契约
+实现并注册（分支 m2-templates，验收见 HANDOFF J 节），交互与往返验收待后续 PR。
 先做最多两套真实视觉候选和 token；用向量合成/正交分解两种数学场景验证跨场景复用。
 引入 Signals/Valibot 的最小适配，建立版本化实例文档、命令校验、保存/读取与两实例隔离。
 不做通用公式语言、物理求解或自动布局。

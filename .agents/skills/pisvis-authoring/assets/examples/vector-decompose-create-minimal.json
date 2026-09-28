@@ -1,0 +1,10 @@
+{
+  "templateId": "vector-decompose",
+  "templateVersion": 1,
+  "params": {
+    "v": {
+      "x": 2.4,
+      "y": 1.6
+    }
+  }
+}

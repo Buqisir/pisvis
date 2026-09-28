@@ -10,9 +10,15 @@
 
 ## 能力目录
 
-`arrow@1`（math-diagram）：二维向量箭头，含坐标轴与标签。输入 start/end/label，
-输出规范化场景文档、派生值（delta/length/direction）、自包含 SVG 与检查报告。
-发现更多能力 → `pisvis_list_capabilities` / `pisvis capabilities`。
+- `arrow@1`（math-diagram）：二维向量箭头，含坐标轴与标签。输入 start/end/label，
+  派生 delta/length/direction。
+- `vector-add@1`（math-diagram）：两向量平行四边形合成。输入 a/b/labels，
+  派生 r/rLength/rDirection。
+- `vector-decompose@1`（math-diagram）：向量正交分解到坐标轴。输入 v/label，
+  派生 vx/vy/length/direction。
+
+均输出规范化场景文档、自包含 SVG 与检查报告。发现更多能力 →
+`pisvis_list_capabilities` / `pisvis capabilities`。
 
 ## 接入
 

@@ -1,0 +1,42 @@
+{
+  "document": {
+    "schemaVersion": 1,
+    "instanceId": "vector-decompose-example",
+    "templateId": "vector-decompose",
+    "templateVersion": 1,
+    "unit": "dimensionless",
+    "params": {
+      "v": {
+        "x": 2.4,
+        "y": 1.6
+      },
+      "label": "V"
+    },
+    "presentation": {
+      "theme": {
+        "id": "illustrated",
+        "version": 2
+      },
+      "canvas": {
+        "width": 640,
+        "height": 360
+      },
+      "viewport": {
+        "mode": "fit"
+      }
+    }
+  },
+  "operations": [
+    {
+      "op": "set-v",
+      "value": {
+        "x": -1.5,
+        "y": 2
+      }
+    },
+    {
+      "op": "set-label",
+      "value": "F"
+    }
+  ]
+}

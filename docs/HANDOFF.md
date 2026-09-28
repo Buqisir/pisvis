@@ -310,3 +310,61 @@ session_meta 记录），macOS arm64。隔离：临时 `CODEX_HOME`（仅 auth.j
 错误本身当时未带 `allowedValues`（与 errors.md 的承诺不符）；本分支随后已为全部三处
 unknown-theme 补 `allowedValues: ["illustrated@2","linework@1"]` 并加测试。另修复
 `arrow.ts` 误写字面量控制字符导致的二进制文件问题（改为 `\x00-\x1f` 转义，语义不变）。
+
+## J. M2 模板注册
+
+环境：macOS 本机；Node 26.5.0 / npm 11.17.0 / TS 6.0.3 / Playwright 1.63.0（Chromium 1243）。
+提交 6b2759c。
+收尾复跑由主 agent 在仓库约定环境 Node 24.15.0 / npm 11.12.1 下完成：
+npm run build:demo 通过、npm run test:browser 43 通过、npm run test:pack 通过
+（tarball 95.6 kB / 86 文件，HANDOFF 增量使包体略增）。
+
+实现 [Issue #3](https://github.com/Buqisir/pisvis/issues/3) 的数学模板部分：向量合成与
+正交分解两个 `math-diagram` 能力注册进 A1 文档契约。SceneDocument 仍 schemaVersion 1，
+未引入 Signals，无新增依赖。
+
+### 实现要点
+
+- `src/agent/capabilities/vector-add.ts`（vector-add@1）：params `{a, b, labels?{a?,b?,r?}}`；
+  派生 `r`/`rLength`/`rDirection`（r=0 时 rDirection 为 null）；scene() 照 gallery.ts
+  sum-* 结构：input A/B 箭头 + guide 虚线箭头 B′（a→r）+ guide 虚线段（b→r）+
+  readonly 派生箭头 R + 原点 O；axes 与 fitPoints 覆盖 {原点, a, b, r} + axes 角点。
+- `src/agent/capabilities/vector-decompose.ts`（vector-decompose@1）：params `{v, label?}`
+  （默认 'V'）；派生 `vx`/`vy`/`length`/`direction`；scene() 照 gallery.ts dec-*：
+  input V + component 虚线箭头 Vx/Vy + guide 虚线段 V→两分量 + 原点 O。
+- 共享抽取：`capabilities/fields.ts`（coordinate/pointSchema/labelSchema/labelStyle）
+  与 `capabilities/axes.ts`（tickFor/axesRange 改为接受 `Vec2[]`，内部仍含原点，
+  padHi +0.5、span≥1 夹取不变；新增可选 `loPadTicks` 负向整刻度扩展——新能力传 1
+  给轴下/轴左标签留位，arrow 用默认 0）。**arrow 渲染输出逐字节不变**：重构前后
+  5 组参数（常规 3-4-5、负坐标+大坐标、全零退化、极小 0.05/0.02、同点带标签）的
+  SVG 字符串相等。
+- api.ts 不带能力名分支的通用化（新能力无需改 dispatch）：
+  - `readonly-field` hint 改为「该字段由输入参数派生；可写参数与可用操作见 describe
+    返回的 writable/operations」——不再硬编码 start/end；
+  - `set-<param>` 对普通对象参数做字段级合并：`set-labels {a:'x'}` 保留 b/r 原值；
+    完整对象（point 等）校验后合并等价整体替换，arrow 行为不变；
+  - `operationsJsonSchema` 对表内未列名的 `set-<writable>` 操作，由该 param 的
+    schema slice 经 `toJsonSchema` 派生（arrow 的 describe 输出不变，新能力自动获得）；
+  - 「缺少 params」提示与零向量 warning 文案去箭头化。
+- CLI/MCP 零改动：两者本就经注册表/API 驱动；pack 断言与测试更新到新目录。
+- 生成物：`scripts/agent-docs.mjs` 的 examples 段改为按注册表逐能力输出
+  `<id>-{create-minimal,update-variant,failure}.json`（原 3 个无前缀文件重命名为
+  `arrow-*`），`.agents/skills` 镜像经同一脚本同步。
+
+### 验证
+
+- `npm run check`：typecheck 通过；`node --test` 103 通过（A1-3 的 95 + 本轮 8：
+  两能力 happy path/派生数值、readonly-field 通用 hint、set-labels 合并、退化渲染、
+  describe 全 op schema 覆盖）；`agent-docs:check` 无漂移。
+- `npm run test:browser`：43 通过（41 + agent-artifact 扩为 3 个能力的独立 SVG 断言：
+  着色非黑、全部 text 在 viewBox 内；arrow 保留标签-箭杆间距 ≥4px 断言）。
+- `npm run build:demo` / `npm run test:pack`：通过（pack 断言更新为 capabilities
+  total 3 与 examples 前缀命名；tarball 94.8 kB / 86 文件）。
+
+### 已知限制 / 唯一优先下一步
+
+- `labels` 只覆盖 a/b/r；B′、Vx/Vy、O 为固定构造标签，改主输入标签不会联动改名。
+- 长自定义标签仍可能越界——与全库一致：固定锚点+人工偏移，无自动避让。
+- vector-add 的 r=0 不触发 warning（warning 只看 `derived['length']===0`，命中的是
+  decompose 的字段名）；但 derived 自身已含 `rLength:0`/`rDirection:null`。
+- 唯一优先下一步：本 PR 合并后按 Issue #3 余量做交互与往返验收。提交 6b2759c。

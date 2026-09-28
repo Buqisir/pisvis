@@ -37,10 +37,10 @@ test('unknown command exits 2 with a JSON usage-error on stdout', () => {
   assert.equal(j.errors[0].code, 'usage-error');
 });
 
-test('capabilities lists arrow only', () => {
+test('capabilities lists the whole registry in stable order', () => {
   const j = asJson(run(['capabilities']));
-  assert.equal(j.total, 1);
-  assert.equal(j.items[0].id, 'arrow');
+  assert.equal(j.total, 3);
+  assert.deepEqual(j.items.map((i) => i.id), ['arrow', 'vector-add', 'vector-decompose']);
 });
 
 test('create/validate/update via file and via stdin', () => {

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "templateId": "vector-add",
+    "templateVersion": 1,
+    "params": {
+      "a": {
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  "expectedCode": "missing-field",
+  "fix": "补上 params.b，例如 {x: 0.5, y: 1.8}；用 describe 查看完整 params Schema"
+}
