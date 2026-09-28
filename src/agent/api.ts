@@ -3,7 +3,7 @@ import { fitViewport } from '../core/fit.js';
 import type { Viewport } from '../core/viewport.js';
 import type { Vec2 } from '../math/vec2.js';
 import { renderStandaloneSceneSvg } from '../render/standalone.js';
-import { getTheme } from '../theme/themes.js';
+import { getTheme, THEMES } from '../theme/themes.js';
 import type {
   ApiError, AuthoringApi, CapabilityDefinition, CapabilityListResult,
   Checks, ErrorCode, Failure, SceneDocument, SceneSuccess,
@@ -261,6 +261,7 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       return {
         fail: failure([err('unknown-theme', 'document.presentation.theme',
           `主题 ${input.presentation.theme.id}@${input.presentation.theme.version} 未注册`, {
+            allowedValues: THEMES.map((t) => `${t.id}@${t.version}`),
             hint: '主题必须精确匹配已注册版本的 id 与 version',
           })], 'failed'),
       };
@@ -421,7 +422,10 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
       const themeDef = getTheme(presentation.theme.id, presentation.theme.version);
       if (themeDef === null) {
         return failure([err('unknown-theme', 'presentation.theme',
-          `主题 ${presentation.theme.id}@${presentation.theme.version} 未注册`)], 'failed');
+          `主题 ${presentation.theme.id}@${presentation.theme.version} 未注册`, {
+            allowedValues: THEMES.map((t) => `${t.id}@${t.version}`),
+            hint: '主题必须精确匹配已注册版本的 id 与 version',
+          })], 'failed');
       }
       const instanceId = req.instanceId !== undefined ? req.instanceId : `${cap.id}-${hashHex(canonicalJson(params)).slice(0, 8)}`;
       const idCheck = parse(idString as unknown as GenericSchema, instanceId);
@@ -495,7 +499,9 @@ export function createAuthoringApi(capabilities: readonly CapabilityDefinition[]
             } else {
               const t = r.output as { id: string; version: number };
               if (getTheme(t.id, t.version) === null) {
-                errors.push(err('unknown-theme', `${opPath}.value`, `主题 ${t.id}@${t.version} 未注册`));
+                errors.push(err('unknown-theme', `${opPath}.value`, `主题 ${t.id}@${t.version} 未注册`, {
+                  allowedValues: THEMES.map((x) => `${x.id}@${x.version}`),
+                }));
               } else {
                 (candidate.presentation as { theme: unknown }).theme = t;
               }

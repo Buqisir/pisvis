@@ -60,6 +60,11 @@ KaTeX 的公式文字也不作为计算来源，公式 ID 与模型输出应有�
 
 ## 5. 存档与版本
 
+**场景文档 v1 已在 arrow@1 落地**（见 Skill references/document.md）：`schemaVersion` /
+`instanceId` / `templateId`+`templateVersion` / `unit` / `params` / `presentation`
+（theme 精确 id+version、canvas、viewport fit|explicit）。M2/M3 的题型模板必须注册进同一
+注册表、复用同一文档基座，不平行造第二种存档格式。
+
 首个文档只保存重建需要的纯数据：schema 版本、实例 ID、精确模板/模型版本、输入条件、单位、
 需要持久化的教学状态、主题 ID/版本和有限布局覆盖。物理题可分离原题条件与探索参数。
 不序列化 Signal、DOM、GPU 对象、函数、闭包或派生缓存，不从文档下载可执行模板。
@@ -69,7 +74,8 @@ schemaVersion 负责文档结构；templateVersion/modelVersion 负责行为；t
 迁移是显式函数并有旧例测试，改变语义的升级需要说明与确认。模板、模型和文档版本不必使用同一计数器。
 
 保存/读取做语义往返测试，不要求属性顺序或生成 SVG 文本完全一样。
-同时检查非有限数、未知字段、重复 ID、坏引用和限额。具体初始导入限额在 M2 Issue，
+同时检查非有限数、未知字段、重复 ID、坏引用和限额（现状：请求 ≤256 KiB、深度 ≤16、
+label ≤200、坐标 |v|≤1e6、canvas 64..4096——实现于 src/agent/api.ts）。
 不得仅声明 TypeScript 类型后就把不可信 JSON 当合法输入。
 
 ## 6. 坐标、单位和时间
@@ -87,10 +93,13 @@ schemaVersion 负责文档结构；templateVersion/modelVersion 负责行为；t
 
 ## 7. 对 Agent 的接口方向
 
-未来可提供查询模板能力、创建实例、校验文档、修改允许参数、切步骤、读取结果等有限操作；
-名称和工具协议应以届时实现为准，本文不是已经注册的 Tool 清单。
+创作 API 已在 A1 落地（arrow@1）：`listCapabilities` / `describeCapability` / `createScene` /
+`validateScene` / `updateScene`（白名单操作）/ `renderScene`，CLI（`pisvis`）与 MCP
+（六个 `pisvis_*` 工具）是同一边界的薄适配。修改操作随能力声明在 describe 的 `operations`
+中；M2/M3 新增能力必须复用同一注册表与文档基座，不造平行格式。
 先发现真实模板及版本、检查适用条件，再构建实例；未知条件追问或明确标注假设。
-Agent 与人工操作走同一命令/校验边界，不能因为是 AI 输出就允许 eval、任意 SVG 或越过原题锁定。
+Agent 与人工操作走同一命令/校验边界（playground 也是经 API 编辑场景文档），
+不能因为是 AI 输出就允许 eval、任意 SVG 或越过原题锁定。
 
 ## 8. 必须测试的不变量
 

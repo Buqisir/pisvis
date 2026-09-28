@@ -33,10 +33,12 @@ M2 视觉样板（PR #7）已合并；M2 其余部分在 A1 契约之后接入�
 | 纯函数输出 SVG 字符串 | 无 DOM 依赖，文字转义，不接受任意 SVG/HTML |
 | 实验页：坐标输入、缩放滑块、两端点原生拖动 | 演示层能力，非库 API；无模板保存或自动标签排版 |
 | 类型检查、库编译、30 个 Node 测试、Chromium 浏览器测试 | Firefox/WebKit 与真实触摸设备尚未验收 |
-| Agent 创作 API 与 CLI（./agent 子入口 + pisvis 命令） | 仅箭头能力；MCP、消费 Skill、冷启动验收在 A1 后续 PR |
+| Agent 创作 API、CLI 与 MCP（./agent + pisvis + pisvis-mcp） | 仅箭头能力 arrow@1；冷启动消费评测待收尾 |
+| 实验页经同一 API 编辑场景文档 | 演示层拖动夹限 x∈[-4,4]/y∈[-2,2] 是 UI 约束，非能力边界 |
 
 依赖完整安装、真实锁文件（npm ci）、Vite 构建与 Chromium 交互验收已在 M1 完成。
-仍未安装 Signals/Valibot/Motion/KaTeX，也未引入任何 GPU/布局框架，不把候选写成已完成。
+Valibot 仅用于 `./agent` 子入口（decisions/0001），根入口保持零依赖；Signals/Motion/KaTeX
+仍未安装，也未引入任何 GPU/布局框架，不把候选写成已完成。
 
 ## 建设方向
 

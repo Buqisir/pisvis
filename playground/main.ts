@@ -1,8 +1,10 @@
 import {
-  add, applyAffine, invertAffine, magnitude, renderArrowSvg, screenToWorld,
-  sub, vec2, worldToScreen,
+  add, applyAffine, invertAffine, screenToWorld, sub, vec2, worldToScreen,
+  DEFAULT_THEME,
 } from '../src/index.js';
-import type { Vec2 } from '../src/index.js';
+import type { Vec2, Viewport } from '../src/index.js';
+import { authoring } from '../src/agent.js';
+import type { SceneDocument } from '../src/agent.js';
 import { fmt } from './format.js';
 
 function element<T extends HTMLElement>(id: string, kind: { new(): T }): T {
@@ -27,30 +29,24 @@ const inputs = {
 type Endpoint = 'start' | 'end';
 type FieldId = 'ax' | 'ay' | 'bx' | 'by';
 
-interface PlaygroundState {
-  start: Vec2;
-  end: Vec2;
-  zoom: number;
-  selected: Endpoint;
+// The page's single source of truth is a scene document — the same boundary
+// Agent callers use. Derived values come back from the API, never recomputed.
+interface PlaygroundPage {
+  document: SceneDocument;
+  derived: Record<string, unknown>;
+  documentHash: string;
 }
-
-const DEFAULT_STATE: PlaygroundState = {
-  start: vec2(-2, -1),
-  end: vec2(2, 1),
-  zoom: 50,
-  selected: 'end',
-};
-const state: PlaygroundState = {
-  start: DEFAULT_STATE.start,
-  end: DEFAULT_STATE.end,
-  zoom: DEFAULT_STATE.zoom,
-  selected: DEFAULT_STATE.selected,
-};
+const page: PlaygroundPage = { document: null as never, derived: {}, documentHash: '' };
+let selected: Endpoint = 'end';
+let apiError: string | null = null;
 
 const WIDTH_PX = 640;
 const HEIGHT_PX = 360;
 const ORIGIN = vec2(320, 180);
-// Demo-layer drag bounds; the core geometry functions stay unbounded.
+const DEFAULT_START = vec2(-2, -1);
+const DEFAULT_END = vec2(2, 1);
+const DEFAULT_ZOOM = 50;
+// Demo-layer drag bounds only — the capability itself allows |coords| <= 1e6.
 const BOUNDS = { xMin: -4, xMax: 4, yMin: -2, yMax: 2 };
 const ERROR_TEXT = '请填写范围内的有限数值。';
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -61,11 +57,59 @@ const ENDPOINT_FIELDS: Record<Endpoint, [FieldId, FieldId]> = {
   end: ['bx', 'by'],
 };
 
-const viewport = () => ({ originPx: ORIGIN, pixelsPerUnit: state.zoom });
+const point = (which: Endpoint): Vec2 => page.document.params[which] as Vec2;
+const viewport = (): Viewport => {
+  const v = page.document.presentation.viewport;
+  return v.mode === 'explicit' ? { originPx: v.originPx, pixelsPerUnit: v.pixelsPerUnit }
+    : { originPx: ORIGIN, pixelsPerUnit: DEFAULT_ZOOM };
+};
 
-function directionText(delta: Vec2): string {
-  if (magnitude(delta) === 0) return '—';
-  return `${((Math.atan2(delta.y, delta.x) * 180) / Math.PI).toFixed(1)}°`;
+function createDefault(): boolean {
+  const r = authoring.createScene({
+    templateId: 'arrow',
+    templateVersion: 1,
+    params: { start: DEFAULT_START, end: DEFAULT_END, label: '向量' },
+    presentation: {
+      theme: { id: DEFAULT_THEME.id, version: DEFAULT_THEME.version },
+      canvas: { width: WIDTH_PX, height: HEIGHT_PX },
+      viewport: { mode: 'explicit', originPx: ORIGIN, pixelsPerUnit: DEFAULT_ZOOM },
+    },
+  });
+  if (!r.ok) {
+    status.textContent = r.errors[0]?.message ?? '初始化失败';
+    return false;
+  }
+  page.document = r.document;
+  page.derived = r.derived;
+  page.documentHash = r.documentHash;
+  apiError = null;
+  return true;
+}
+
+// All edits go through the same updateScene boundary; failures keep the last
+// valid document and surface the API error (message + hint) in #status.
+function applyOps(operations: readonly { op: string; value?: unknown }[], errField?: FieldId): boolean {
+  const r = authoring.updateScene({ document: page.document, operations });
+  if (!r.ok) {
+    const e = r.errors[0];
+    apiError = e !== undefined ? `${e.message}${e.hint ? ` ${e.hint}` : ''}` : '修改被拒绝';
+    if (errField !== undefined) {
+      invalid.add(errField);
+      inputs[errField].setAttribute('aria-invalid', 'true');
+    }
+    refreshValidityStatus();
+    return false;
+  }
+  apiError = null;
+  page.document = r.document;
+  page.derived = r.derived;
+  page.documentHash = r.documentHash;
+  return true;
+}
+
+function directionText(): string {
+  const d = page.derived['direction'] as { degrees: number } | null;
+  return d === null || d === undefined ? '—' : `${d.degrees.toFixed(1)}°`;
 }
 
 function circle(attrs: Record<string, string | number>): SVGCircleElement {
@@ -76,9 +120,9 @@ function circle(attrs: Record<string, string | number>): SVGCircleElement {
 
 // The selected handle renders last so it stays on top when endpoints coincide.
 function addHandles(svg: SVGSVGElement): void {
-  const order: Endpoint[] = state.selected === 'end' ? ['start', 'end'] : ['end', 'start'];
+  const order: Endpoint[] = selected === 'end' ? ['start', 'end'] : ['end', 'start'];
   for (const which of order) {
-    const p = worldToScreen(state[which], viewport());
+    const p = worldToScreen(point(which), viewport());
     const g = document.createElementNS(SVG_NS, 'g');
     g.setAttribute('data-handle', which);
     g.setAttribute('class', `handle handle-${which}`);
@@ -86,7 +130,7 @@ function addHandles(svg: SVGSVGElement): void {
       circle({ class: 'hit', cx: p.x, cy: p.y, r: 16, fill: 'transparent', 'pointer-events': 'all' }),
       circle({ class: 'dot', cx: p.x, cy: p.y, r: 7 }),
     );
-    if (which === state.selected) {
+    if (which === selected) {
       g.classList.add('selected');
       g.append(circle({ class: 'ring', cx: p.x, cy: p.y, r: 11 }));
     }
@@ -96,40 +140,36 @@ function addHandles(svg: SVGSVGElement): void {
 
 function draw(): void {
   try {
-    const delta = sub(state.end, state.start);
-    const label = `向量 (${fmt(delta.x)}, ${fmt(delta.y)})`;
-    const text = renderArrowSvg({
-      start: state.start, end: state.end, label,
-      widthPx: WIDTH_PX, heightPx: HEIGHT_PX, viewport: viewport(),
-    });
+    const rendered = authoring.renderScene({ document: page.document });
+    if (!rendered.ok) {
+      status.textContent = rendered.errors[0]?.message ?? '绘制失败';
+      return;
+    }
     // Parse only OUR serializer output; never use this route for arbitrary user SVG.
-    const parsed = new DOMParser().parseFromString(text, 'image/svg+xml');
+    const parsed = new DOMParser().parseFromString(rendered.svg, 'image/svg+xml');
     if (parsed.querySelector('parsererror')) throw new Error('SVG serialization failed');
     const svg = document.importNode(parsed.documentElement, true);
     if (!(svg instanceof SVGSVGElement)) throw new Error('SVG import failed');
     addHandles(svg);
     canvas.replaceChildren(svg);
+    const s = point('start');
+    const e = point('end');
+    const length = page.derived['length'] as number;
     readout.textContent =
-      `起点 (${fmt(state.start.x)}, ${fmt(state.start.y)}) · ` +
-      `终点 (${fmt(state.end.x)}, ${fmt(state.end.y)}) · ` +
-      `长度 ${magnitude(delta).toFixed(3)}（无量纲）· 方向 ${directionText(delta)}`;
+      `起点 (${fmt(s.x)}, ${fmt(s.y)}) · ` +
+      `终点 (${fmt(e.x)}, ${fmt(e.y)}) · ` +
+      `长度 ${length.toFixed(3)}（无量纲）· 方向 ${directionText()}`;
   } catch (error: unknown) {
     status.textContent = error instanceof Error ? error.message : '绘制失败';
   }
 }
 
-// #status shows the field error while any field is invalid, else announcements.
+// #status priority: field error > API error > announcement.
 function refreshValidityStatus(): void {
   if (invalid.size > 0) status.textContent = ERROR_TEXT;
+  else if (apiError !== null) status.textContent = apiError;
   else if (status.textContent === ERROR_TEXT) status.textContent = '';
 }
-
-const FIELD_SETTERS: Record<FieldId, (value: number) => void> = {
-  ax: (v) => { state.start = vec2(v, state.start.y); },
-  ay: (v) => { state.start = vec2(state.start.x, v); },
-  bx: (v) => { state.end = vec2(v, state.end.y); },
-  by: (v) => { state.end = vec2(state.end.x, v); },
-};
 
 function syncEndpointInputs(which: Endpoint): void {
   for (const id of ENDPOINT_FIELDS[which]) {
@@ -137,23 +177,34 @@ function syncEndpointInputs(which: Endpoint): void {
     inputs[id].removeAttribute('aria-invalid');
   }
   const [xId, yId] = ENDPOINT_FIELDS[which];
-  inputs[xId].value = fmt(state[which].x);
-  inputs[yId].value = fmt(state[which].y);
+  const p = point(which);
+  inputs[xId].value = fmt(p.x);
+  inputs[yId].value = fmt(p.y);
 }
 
 function selectEndpoint(which: Endpoint): void {
-  state.selected = which;
+  selected = which;
   (which === 'start' ? radioStart : radioEnd).checked = true;
   draw();
 }
 
-// Parse ONLY the field that fired: the other inputs display rounded values.
+function setPoint(which: Endpoint, p: Vec2, errField?: FieldId): boolean {
+  const ok = applyOps([{ op: `set-${which}`, value: { x: p.x, y: p.y } }], errField);
+  if (ok) draw();
+  return ok;
+}
+
+// Parse ONLY the field that fired: the other inputs display rounded values,
+// while the untouched component keeps the document's full precision.
 form.addEventListener('input', (event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
   if (target === inputs.zoom) {
     if (target.validity.valid && Number.isFinite(target.valueAsNumber)) {
-      state.zoom = target.valueAsNumber;
+      applyOps([{
+        op: 'set-viewport',
+        value: { mode: 'explicit', originPx: { x: ORIGIN.x, y: ORIGIN.y }, pixelsPerUnit: target.valueAsNumber },
+      }]);
       draw();
     }
     return;
@@ -165,12 +216,20 @@ form.addEventListener('input', (event) => {
     return;
   }
   const field = target.id as FieldId;
-  if (!(field in FIELD_SETTERS)) return;
+  let which: Endpoint | null = null;
+  let component: 'x' | 'y' | null = null;
+  for (const w of ['start', 'end'] as const) {
+    if (ENDPOINT_FIELDS[w][0] === field) { which = w; component = 'x'; }
+    if (ENDPOINT_FIELDS[w][1] === field) { which = w; component = 'y'; }
+  }
+  if (which === null || component === null) return;
   if (target.validity.valid && Number.isFinite(target.valueAsNumber)) {
-    invalid.delete(field);
-    target.removeAttribute('aria-invalid');
-    FIELD_SETTERS[field](target.valueAsNumber);
-    draw();
+    const cur = point(which);
+    const next = component === 'x' ? vec2(target.valueAsNumber, cur.y) : vec2(cur.x, target.valueAsNumber);
+    if (setPoint(which, next, field)) {
+      invalid.delete(field);
+      target.removeAttribute('aria-invalid');
+    }
   } else {
     invalid.add(field);
     target.setAttribute('aria-invalid', 'true');
@@ -197,10 +256,9 @@ function clientToWorld(clientX: number, clientY: number): Vec2 | null {
   return screenToWorld(svgPoint, viewport());
 }
 
-function commitDrag(which: Endpoint, point: Vec2): void {
-  state[which] = point;
+function commitDrag(which: Endpoint, p: Vec2): void {
+  if (!setPoint(which, p)) return;
   syncEndpointInputs(which);
-  draw();
   refreshValidityStatus();
 }
 
@@ -218,8 +276,10 @@ function endDrag(announce: boolean, error?: string): void {
     status.textContent = error;
   } else if (invalid.size > 0) {
     status.textContent = ERROR_TEXT;
+  } else if (apiError !== null) {
+    status.textContent = apiError;
   } else if (announce) {
-    const p = state[target];
+    const p = point(target);
     const name = target === 'start' ? '起点' : '终点';
     status.textContent = `${name}移到 (${fmt(p.x)}, ${fmt(p.y)})`;
   }
@@ -235,12 +295,12 @@ canvas.addEventListener('pointerdown', (event) => {
   if (which !== 'start' && which !== 'end') return;
   event.preventDefault();
   selectEndpoint(which);
-  const point = clientToWorld(event.clientX, event.clientY);
-  if (point === null) {
+  const pt = clientToWorld(event.clientX, event.clientY);
+  if (pt === null) {
     status.textContent = '无法换算指针坐标。';
     return;
   }
-  drag = { pointerId: event.pointerId, target: which, offset: sub(state[which], point) };
+  drag = { pointerId: event.pointerId, target: which, offset: sub(point(which), pt) };
   // Synthetic test events can lack an active pointer; id tracking still works.
   try { canvas.setPointerCapture(event.pointerId); } catch { /* not capturable */ }
   canvas.classList.add('dragging');
@@ -248,12 +308,12 @@ canvas.addEventListener('pointerdown', (event) => {
 
 canvas.addEventListener('pointermove', (event) => {
   if (drag === null || event.pointerId !== drag.pointerId) return;
-  const point = clientToWorld(event.clientX, event.clientY);
-  if (point === null) {
+  const pt = clientToWorld(event.clientX, event.clientY);
+  if (pt === null) {
     endDrag(true, '无法换算指针坐标。');
     return;
   }
-  const moved = add(point, drag.offset);
+  const moved = add(pt, drag.offset);
   commitDrag(drag.target, vec2(
     clamp(moved.x, BOUNDS.xMin, BOUNDS.xMax),
     clamp(moved.y, BOUNDS.yMin, BOUNDS.yMax),
@@ -273,21 +333,27 @@ form.addEventListener('reset', () => {
   endDrag(false);
   // The browser restores control values after the reset event; sync afterwards.
   setTimeout(() => {
-    state.start = DEFAULT_STATE.start;
-    state.end = DEFAULT_STATE.end;
-    state.zoom = DEFAULT_STATE.zoom;
-    state.selected = DEFAULT_STATE.selected;
+    if (!createDefault()) return;
+    selected = 'end';
     invalid.clear();
     for (const input of Object.values(inputs)) input.removeAttribute('aria-invalid');
-    inputs.ax.value = fmt(state.start.x);
-    inputs.ay.value = fmt(state.start.y);
-    inputs.bx.value = fmt(state.end.x);
-    inputs.by.value = fmt(state.end.y);
-    inputs.zoom.value = String(state.zoom);
+    const s = point('start');
+    const e = point('end');
+    inputs.ax.value = fmt(s.x);
+    inputs.ay.value = fmt(s.y);
+    inputs.bx.value = fmt(e.x);
+    inputs.by.value = fmt(e.y);
+    inputs.zoom.value = String(DEFAULT_ZOOM);
     radioEnd.checked = true;
     status.textContent = '';
     draw();
   });
 });
 
+// Read-only document access for tests: proves the page runs on the same
+// document/command boundary the authoring API exposes to agents.
+(window as unknown as { __pvDocument: () => SceneDocument }).__pvDocument =
+  () => JSON.parse(JSON.stringify(page.document)) as SceneDocument;
+
+createDefault();
 draw();
