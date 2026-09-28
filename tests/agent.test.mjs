@@ -115,6 +115,9 @@ test('document errors: schemaVersion, unknown field, unit, theme', () => {
   check((d) => { d.unit = 'm'; }, 'unit-mismatch', 'unit');
   check((d) => { d.params.unit = 'm'; }, 'unit-mismatch', 'params.unit');
   check((d) => { d.presentation.theme = { id: 'illustrated', version: 1 }; }, 'unknown-theme', 'theme');
+  // unknown-theme carries the registered id@version list so agents can self-correct
+  const badTheme = authoring.validateScene({ document: (() => { const d = clone(base); d.presentation.theme = { id: 'neon', version: 9 }; return d; })() });
+  assert.deepEqual(badTheme.errors[0].allowedValues, ['illustrated@2', 'linework@1']);
   check((d) => { d.params.surprise = 1; }, 'unknown-field', 'params');
 });
 
@@ -154,6 +157,14 @@ test('limits: too-large, too-deep, prototype pollution safe', () => {
 });
 
 // ---- round trip + render ------------------------------------------------------
+
+test('fully-degenerate origin scene still renders (tick spacing never 0)', () => {
+  const r = authoring.createScene({ templateId: 'arrow', templateVersion: 1, params: { start: { x: 0, y: 0 }, end: { x: 0, y: 0 } } });
+  assert.ok(r.ok);
+  const s = authoring.renderScene({ document: r.document });
+  assert.ok(s.ok);
+  assert.match(s.svg, /pv-zero/);
+});
 
 test('round trip: serialize -> parse -> validate -> same doc + hash', () => {
   const r = authoring.createScene(clone(CREATE));

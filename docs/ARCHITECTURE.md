@@ -6,17 +6,23 @@
 
 ```text
 src/math/vec2.ts          有限数值、向量运算
-src/core/viewport.ts      世界与 SVG 逻辑像素坐标互换
-src/primitives/arrow.ts   箭杆与三角箭头几何
-src/render/svg.ts         纯 SVG 序列化，不访问 DOM
-src/index.ts             公共导出
-playground/              浏览器实验页源码
-skills/                  Agent 使用约定
+src/core/                 视口、仿射变换、viewport 适配
+src/render/scene.ts       多图元场景序列化（轴/箭头/点/标签/手柄）
+src/render/standalone.ts  自包含样式的独立 SVG（SCENE_BASE_CSS + 主题变量内联）
+src/theme/                主题 token 与 CSS 变量适配（THEMES / getTheme 精确版本）
+src/agent/                能力注册表 + 纯数据创作 API（list/describe/create/validate/update/render）
+src/cli/                  pisvis CLI（Node-only）
+src/mcp/                  pisvis-mcp stdio 服务器（Node-only，官方 SDK 2.0.0）
+src/index.ts              根公共导出（零依赖，无 valibot/node:）
+src/agent.ts              ./agent 子入口（valibot，可浏览器）
+playground/               浏览器实验页——经 authoring API 消费场景文档，与 Agent 同一边界
+skills/                   Agent 消费 Skill
 ```
 
-当前依赖方向：math 被 core/primitives 使用，render 消费几何，playground 使用库。
-还没有场景/模板系统、Signals/Valibot 接入、物理模型、自动排版、时间轴或 Agent Tool 注册。
-本次设计更新不修改这些实现或 package.json，初始化测试边界见 [HANDOFF](HANDOFF.md)。
+当前依赖方向：math ← core ← render ← agent；cli/mcp 只在 Node 适配层调 API。
+根入口保持零依赖（import-graph 测试断言）；`./agent` 只引 valibot；
+cli/mcp 是独立的 Node 编译目标。Signals/自动排版/物理模型/时间轴尚未接入。
+测试边界记录见 [HANDOFF](HANDOFF.md)。
 
 ## 2. 自研与借用
 

@@ -267,3 +267,46 @@ A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
 - 未做（PR 3）：冷启动消费评测、playground 经 API 创建/编辑场景、Issue §2 文档同步收尾。
 - 注意：SDK 2.0.0 的 DEFAULT_NEGOTIATED_PROTOCOL_VERSION 常量显示 2025-03-26（历史兼容默认），
   实测协商 2025-11-25。npx/.bin 经符号链接运行 → isMain 用 realpathSync(argv[1]) 对比模块路径。
+
+## I. A1-3 playground 接入与文档同步
+
+环境：Node 24.15.0 / npm 11.12.1 / Playwright 1.63.0（Chromium 1243）。提交 <commit>。
+
+- playground/main.ts 重写：唯一事实源是 arrow@1 场景文档（createScene → updateScene →
+  renderScene 自含样式 SVG + 手柄覆盖层）；数值输入 set-start/set-end（合并全精度分量）、
+  拖动同 op、缩放走 set-viewport explicit、重置=重建默认文档；读数全部来自 API derived，
+  页面不再重算 magnitude/atan2。ok:false 保留旧文档并把 API message+hint 写进 #status
+  （输入引起的错误标 aria-invalid）。拖动夹限保留为 UI 注释约束。测试可读
+  `window.__pvDocument()`（只读克隆）。
+- 修正缺陷：arrow 能力在全退化坐标（如 (0,0)→(0,0)）下 tickFor 得到 1e-9 级刻度导致
+  序列化循环挂死；span 现在夹到 ≥1 再选刻度，并补了全零场景渲染回归测试。
+- M1 浏览器测试断言仅一处结构性改动：`#canvas svg polygon` → `polygon.pv-head`
+  （场景 SVG 现在先渲染坐标轴头多边形，角色箭头头才在 `.pv-head`）。行为断言全部保留。
+  新增「playground state IS an authoring document」：拖动/输入后 __pvDocument() 经
+  validateScene 通过、derived 与读数一致。
+- 文档同步（Issue §2）：PRODUCT 增 Agent-first 决策段（消费/开发 Agent 分工、同一边界）；
+  ARCHITECTURE §1 更新真实结构与依赖方向；REUSE_AND_BINDINGS §5/§7 落地为现存契约；
+  README/ROADMAP/AGENTS 状态行一致（A1 PR1+2 merged、PR3 实现完成、冷启动评测待收尾）。
+- 测试：npm run check 95 通过；npm run test:browser 41 通过；npm run test:pack 通过。
+
+### 冷启动评测（Codex，2026-09-28）
+
+宿主：`codex exec`（codex-cli 0.156.1），模型 `gpt-6-astra`（provider openai，rollout
+session_meta 记录），macOS arm64。隔离：临时 `CODEX_HOME`（仅 auth.json + MCP 配置，
+无用户规则/AGENTS.md/历史），临时工作区 `npm install pisvis-0.0.0.tgz`（tarball 打包于
+本分支工作树，早于下方 unknown-theme 增补），Skill 置于 `.agents/skills/pisvis-authoring`。
+每次会话独立 `codex exec --ephemeral`（`--approve-for-me`，workspace-write 沙箱），
+无人工提示、无源码阅读（仅读 Skill 与 references）。日志保留于 /tmp/pisvis-eval-codex/logs。
+
+| 会话 | 意图（原文提示） | 实际调用链 | 结果 |
+|---|---|---|---|
+| A0（approval=never 对照） | 画 (0,0)→(3,2) 向量「速度 v」，存 out/vector.svg | SKILL.md → MCP list（被拒："requires approval"）→ 按 Skill 降级 CLI：capabilities → describe → create+render 经 stdin | 成功，SVG/scene/report 三产物齐全 |
+| A（MCP） | 同上 | SKILL.md → `pisvis_list_capabilities` → `describe` → `create` → `validate` → `render` → 写文件 | 成功；产物核对：params/label/illustrated@2 正确，SVG 自含样式 |
+| B（修改保持其余） | scene.json（主题 linework@1）终点改 (1,4)，其余不变 | SKILL.md → list → describe → validate → `update_scene` set-end → validate → render → 写回 | 成功；label/主题/canvas/instanceId 全部保留 |
+| C（非法参数） | 主题「neon-blue」 | list → describe → create 失败 `unknown-theme` → 读 errors.md+document.md → 如实列出已注册主题并反问选用哪个 | 未产出文件，诚实待确认——不静默替换 |
+| D（不支持的能力） | 平抛运动演示（轨迹+速度分解） | SKILL.md → list → 如实报告仅 arrow@1、不生成 throw.svg，引用 Skill 规则并提出替代方案 | 诚实拒绝，无伪造 |
+
+发现与后续修正：C 的恢复靠 references/document.md 里的已注册主题清单——`unknown-theme`
+错误本身当时未带 `allowedValues`（与 errors.md 的承诺不符）；本分支随后已为全部三处
+unknown-theme 补 `allowedValues: ["illustrated@2","linework@1"]` 并加测试。另修复
+`arrow.ts` 误写字面量控制字符导致的二进制文件问题（改为 `\x00-\x1f` 转义，语义不变）。

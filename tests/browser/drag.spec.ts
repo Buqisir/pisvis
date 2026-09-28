@@ -112,7 +112,8 @@ test('coincident endpoints separate via the endpoint radios', async ({ page }) =
 });
 
 test('invalid input keeps the last graphic; dragging the endpoint recovers', async ({ page }) => {
-  const tip = page.locator('#canvas svg polygon');
+  // the scene svg now also contains axis-head polygons; the role arrow head is .pv-head
+  const tip = page.locator('#canvas svg polygon.pv-head');
   await expect(tip).toHaveAttribute('points', /^420,130 /);
   await page.locator('#bx').fill('9');
   await expect(page.locator('#status')).toHaveText(/请填写范围内的有限数值/);
