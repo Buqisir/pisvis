@@ -4,8 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
 // into themed stage containers. Geometry lives in the viewBox coordinate space.
 
 const THEMES = [
-  ['#theme-a', 'candidate-illustrated'],
-  ['#theme-b', 'candidate-linework'],
+  ['#theme-a', 'illustrated'],
+  ['#theme-b', 'linework'],
 ] as const;
 const SVG_COUNT = 19; // 13 specimen cells + 1 composition + 1 decomposition + 4 edge panels
 
@@ -38,6 +38,9 @@ test('loads; both themes render; compare shows 2 stages per scene', async ({ pag
   await page.reload();
 
   await expect(page.locator('.specimen')).toHaveCount(4);
+  // default load renders under DEFAULT_THEME's scope (illustrated@v2;
+  // Node-side tests assert DEFAULT_THEME === THEME_ILLUSTRATED)
+  await expect(page.locator('[data-pv-theme="illustrated"] svg')).toHaveCount(SVG_COUNT);
   await expect(page.locator('.specimen svg.pv-scene')).toHaveCount(SVG_COUNT);
   await page.screenshot({ path: 'test-results/screenshots/gallery-a.png', fullPage: true });
 

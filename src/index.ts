@@ -16,6 +16,6 @@ export type {
 export { COLOR_ROLES, checkTheme } from './theme/tokens.js';
 export type { ColorRole, ColorToken, ThemeDefinition } from './theme/tokens.js';
 export {
-  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK, CANDIDATE_THEMES,
+  DEFAULT_THEME, THEMES, THEME_ILLUSTRATED, THEME_LINEWORK, getTheme,
 } from './theme/themes.js';
 export { themeToCssText } from './theme/css.js';

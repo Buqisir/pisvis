@@ -16,7 +16,8 @@ export interface ColorToken {
 export interface ThemeDefinition {
   readonly id: string;            // /^[a-z][a-z0-9-]{0,63}$/
   readonly version: number;       // positive integer
-  readonly status: 'candidate';
+  /** 'provisional' = adopted as the current default but still revisable. */
+  readonly status: 'candidate' | 'provisional';
   readonly name: string;          // Chinese display name
   readonly color: Readonly<Record<ColorRole, ColorToken>>;
   // SVG px stroke widths; geometry, not colors.
@@ -88,7 +89,9 @@ export function checkTheme(theme: ThemeDefinition): ThemeDefinition {
   if (!Number.isInteger(theme.version) || theme.version <= 0) {
     throw new RangeError('theme.version must be a positive integer');
   }
-  if (theme.status !== 'candidate') throw new RangeError('theme.status must be candidate');
+  if (theme.status !== 'candidate' && theme.status !== 'provisional') {
+    throw new RangeError(`unknown theme status: ${String(theme.status)}`);
+  }
   if (typeof theme.name !== 'string' || theme.name.length === 0) {
     throw new RangeError('theme.name must be a non-empty string');
   }

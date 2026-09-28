@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CANDIDATE_THEMES, COLOR_ROLES, themeToCssText,
+  COLOR_ROLES, DEFAULT_THEME, THEMES, THEME_ILLUSTRATED, getTheme,
+  themeToCssText, checkTheme,
 } from '../dist/index.js';
 
 // Independent OKLCH -> sRGB conversion (Björn Ottosson / CSS Color 4 matrices)
@@ -37,9 +38,9 @@ const contrast = (a, b) => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-for (const theme of CANDIDATE_THEMES) {
+for (const theme of THEMES) {
   test(`${theme.id}: every color role present with valid formats`, () => {
-    assert.equal(theme.status, 'candidate');
+    assert.ok(['candidate', 'provisional'].includes(theme.status), theme.status);
     for (const role of COLOR_ROLES) {
       const token = theme.color[role];
       assert.ok(token, `missing ${role}`);
@@ -84,8 +85,8 @@ for (const theme of CANDIDATE_THEMES) {
 }
 
 test('themeToCssText emits sRGB fallbacks first, then an oklch @supports block', () => {
-  const theme = CANDIDATE_THEMES[0];
-  const css = themeToCssText(theme, '[data-pv-theme="candidate-illustrated"]');
+  const theme = THEMES[0];
+  const css = themeToCssText(theme, '[data-pv-theme="illustrated"]');
   assert.ok(css.indexOf(theme.color.input.srgb) < css.indexOf('@supports'));
   assert.ok(css.indexOf('@supports (color: oklch(0% 0 0))') > 0);
   assert.ok(css.includes(`--pv-input:${theme.color.input.srgb}`));
@@ -95,7 +96,7 @@ test('themeToCssText emits sRGB fallbacks first, then an oklch @supports block',
 });
 
 test('themeToCssText rejects unsafe selectors and bad token strings', () => {
-  const theme = CANDIDATE_THEMES[0];
+  const theme = THEMES[0];
   for (const bad of ['div', '[data-pv-theme="BAD"]', 'x{color:red}', '[data-pv-theme="a"];body{}']) {
     assert.throws(() => themeToCssText(theme, bad), RangeError);
   }
@@ -108,4 +109,27 @@ test('themeToCssText rejects unsafe selectors and bad token strings', () => {
   ]) {
     assert.throws(() => themeToCssText(mutate(theme), '[data-pv-theme="t-ok"]'), RangeError);
   }
+});
+
+test('DEFAULT_THEME is the provisional member of THEMES', () => {
+  assert.ok(THEMES.includes(DEFAULT_THEME));
+  assert.equal(DEFAULT_THEME.status, 'provisional');
+  assert.equal(DEFAULT_THEME, THEME_ILLUSTRATED);
+  for (const t of THEMES) assert.ok(['candidate', 'provisional'].includes(t.status));
+});
+
+test('getTheme matches id+version exactly — never latest', () => {
+  assert.equal(getTheme(DEFAULT_THEME.id, DEFAULT_THEME.version), DEFAULT_THEME);
+  assert.equal(getTheme(DEFAULT_THEME.id, 1), null); // v1 superseded by v2
+  assert.equal(getTheme('no-such-theme', 1), null);
+});
+
+test('theme id@version pairs are unique in THEMES', () => {
+  const keys = THEMES.map((t) => `${t.id}@${t.version}`);
+  assert.equal(new Set(keys).size, keys.length);
+});
+
+test('checkTheme rejects a bad status', () => {
+  const bad = { ...THEME_ILLUSTRATED, status: 'approved' };
+  assert.throws(() => checkTheme(bad), RangeError);
 });

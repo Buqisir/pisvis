@@ -57,14 +57,14 @@
 }
 
 /* per-candidate adjustments kept inside the one shared stylesheet */
-[data-pv-theme="candidate-illustrated"] .pv-ticks { display: none; }
-[data-pv-theme="candidate-linework"] .pv-role-derived .pv-shaft {
+[data-pv-theme="illustrated"] .pv-ticks { display: none; }
+[data-pv-theme="linework"] .pv-role-derived .pv-shaft {
   stroke-width: calc(var(--pv-stroke-main) + 0.75px);
 }
 
 .pv-ring { transform-box: fill-box; transform-origin: center; }
 /* A v2: lighter selection ring */
-[data-pv-theme="candidate-illustrated"] .pv-ring { stroke-width: 1.5px; }
+[data-pv-theme="illustrated"] .pv-ring { stroke-width: 1.5px; }
 
 /* variable labels: italic serif (scientific illustration convention) */
 .pv-label-var { font-family: var(--pv-font-variable); font-style: italic; }

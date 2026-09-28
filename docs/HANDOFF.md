@@ -204,3 +204,8 @@ A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
   或渐变，绝不默认黑/无填充；有效字号 ≥12.5px。
 - 截图重生成 gallery-{a,b,compare,grayscale,long-labels,mobile}.png；gallery-c* 已删除。
 - demo-dist gallery 页 ≈26.8kB（js 24.2 + css 2.55 + html 2.1），与 E.2 基本持平。
+- 追加（2026-09-28）：维护者决定先用 A v2——导出改名 THEMES/THEME_ILLUSTRATED/THEME_LINEWORK +
+  `DEFAULT_THEME` + `getTheme(id,version)`（仅精确匹配）；status 枚举扩为 'candidate'|'provisional'，
+  A v2 为 provisional。npm run check 61 通过、test:browser 39 通过。
+  追加：合并前主题 id 去掉 candidate- 前缀——`illustrated@2` / `linework@1`（版本不变），
+  尚无存档文档引用旧 id。

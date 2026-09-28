@@ -1,5 +1,5 @@
 import {
-  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK, CANDIDATE_THEMES,
+  DEFAULT_THEME, THEMES, THEME_ILLUSTRATED, THEME_LINEWORK,
   add, fitViewport, magnitude, renderSceneSvg, themeToCssText, vec2,
 } from '../src/index.js';
 import type { SceneItem, ThemeDefinition, Vec2, Viewport } from '../src/index.js';
@@ -18,7 +18,7 @@ const optMotion = element('opt-motion', HTMLInputElement);
 const optLong = element('opt-long', HTMLInputElement);
 
 // Same margin for every render so theme switching never moves geometry.
-const MARGIN = Math.max(...CANDIDATE_THEMES.map((t) => t.space.safeMargin));
+const MARGIN = Math.max(...THEMES.map((t) => t.space.safeMargin));
 const ZERO = vec2(0, 0);
 
 interface Slot {
@@ -209,7 +209,7 @@ const SCENES: SectionDef[] = [
 
 // Theme styles are injected once; scopes keep side-by-side instances isolated.
 const styleEl = document.createElement('style');
-styleEl.textContent = CANDIDATE_THEMES
+styleEl.textContent = THEMES
   .map((t) => themeToCssText(t, `[data-pv-theme="${t.id}"]`))
   .join('\n');
 document.head.append(styleEl);
@@ -330,7 +330,7 @@ function themeMode(): 'a' | 'b' | 'both' {
 }
 
 function variantOf(theme: ThemeDefinition): string {
-  return theme === CANDIDATE_ILLUSTRATED ? 'a' : 'b';
+  return theme === THEME_ILLUSTRATED ? 'a' : 'b';
 }
 
 const entrances = new WeakMap<HTMLElement, { slot: Slot; section: SectionDef }>();
@@ -341,9 +341,9 @@ function render(): void {
   const mode = themeMode();
   const long = optLong.checked;
   const variants: ThemeDefinition[] =
-    mode === 'a' ? [CANDIDATE_ILLUSTRATED]
-    : mode === 'b' ? [CANDIDATE_LINEWORK]
-    : [...CANDIDATE_THEMES];
+    mode === 'a' ? [THEME_ILLUSTRATED]
+    : mode === 'b' ? [THEME_LINEWORK]
+    : [...THEMES];
 
   scenesRoot.replaceChildren();
   scenesRoot.classList.toggle('pv-grayscale', optGray.checked);
@@ -512,5 +512,12 @@ function runCellEntrance(cell: HTMLElement, gen: number): boolean {
   return meta.section.key === 'sum';
 }
 
+// default selection follows DEFAULT_THEME, not a hard-coded radio
+controls.querySelector<HTMLInputElement>(
+  `input[name="theme"][value="${variantOf(DEFAULT_THEME)}"]`,
+)?.setAttribute('checked', '');
+controls.querySelectorAll<HTMLInputElement>('input[name="theme"]').forEach((r) => {
+  r.checked = r.value === variantOf(DEFAULT_THEME);
+});
 controls.addEventListener('input', render);
 render();

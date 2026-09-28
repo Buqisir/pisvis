@@ -1,16 +1,17 @@
 import { checkTheme } from './tokens.js';
 import type { ThemeDefinition } from './tokens.js';
 
-// Both themes are CANDIDATES awaiting maintainer review — never mark approved.
+// THEME_ILLUSTRATED is the provisional default (may be revised); THEME_LINEWORK
+// stays a comparison candidate. Never mark either approved.
 // srgb fallbacks are the in-gamut conversion of the authored OKLCH values.
 
 // v2 (2026-09-28): maintainer picked A's direction but asked to remove the
 // "plastic" feel — gradients/texture/halo blobs and the thick round strokes are
 // gone; palette airier; component is soft terracotta instead of dark bronze.
-export const CANDIDATE_ILLUSTRATED: ThemeDefinition = checkTheme({
-  id: 'candidate-illustrated',
+export const THEME_ILLUSTRATED: ThemeDefinition = checkTheme({
+  id: 'illustrated',
   version: 2,
-  status: 'candidate',
+  status: 'provisional',
   name: '轻质感科学插画',
   color: {
     paper: { oklch: 'oklch(98.6% 0.008 85)', srgb: '#fdfaf4' },
@@ -41,8 +42,8 @@ export const CANDIDATE_ILLUSTRATED: ThemeDefinition = checkTheme({
   motion: { emphasisMs: 260, easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)' },
 });
 
-export const CANDIDATE_LINEWORK: ThemeDefinition = checkTheme({
-  id: 'candidate-linework',
+export const THEME_LINEWORK: ThemeDefinition = checkTheme({
+  id: 'linework',
   version: 1,
   status: 'candidate',
   name: '精密清爽线描',
@@ -76,7 +77,16 @@ export const CANDIDATE_LINEWORK: ThemeDefinition = checkTheme({
 });
 
 
-export const CANDIDATE_THEMES: readonly ThemeDefinition[] = [
-  CANDIDATE_ILLUSTRATED,
-  CANDIDATE_LINEWORK,
+export const THEMES: readonly ThemeDefinition[] = [
+  THEME_ILLUSTRATED,
+  THEME_LINEWORK,
 ];
+
+// Current default. To revise A: ship a new version of illustrated and
+// move this binding; documents always reference an exact id+version.
+export const DEFAULT_THEME: ThemeDefinition = THEME_ILLUSTRATED;
+
+/** Exact id+version match only — never resolves "latest". */
+export function getTheme(id: string, version: number): ThemeDefinition | null {
+  return THEMES.find((t) => t.id === id && t.version === version) ?? null;
+}

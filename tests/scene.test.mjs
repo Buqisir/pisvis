@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CANDIDATE_ILLUSTRATED, CANDIDATE_LINEWORK,
-  CANDIDATE_THEMES, renderSceneSvg, vec2,
+  THEME_ILLUSTRATED, THEME_LINEWORK,
+  THEMES, renderSceneSvg, vec2,
 } from '../dist/index.js';
 
 const view = { originPx: vec2(200, 150), pixelsPerUnit: 40 };
-const base = (instanceId, theme = CANDIDATE_ILLUSTRATED, items = undefined) =>
+const base = (instanceId, theme = THEME_ILLUSTRATED, items = undefined) =>
   renderSceneSvg({
     instanceId, theme, widthPx: 400, heightPx: 300, viewport: view,
     title: '场景示意', items: items ?? [
@@ -49,17 +49,17 @@ test('two instances produce disjoint id sets', () => {
 
 test('invalid instance/item ids and duplicates are rejected', () => {
   assert.throws(() => base('Bad Id'), RangeError);
-  assert.throws(() => base('ok', CANDIDATE_ILLUSTRATED, [
+  assert.throws(() => base('ok', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'A', role: 'input', from: vec2(0, 0), to: vec2(1, 0) },
   ]), RangeError);
-  assert.throws(() => base('ok', CANDIDATE_ILLUSTRATED, [
+  assert.throws(() => base('ok', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'x', role: 'input', from: vec2(0, 0), to: vec2(1, 0) },
     { kind: 'point', id: 'x', role: 'input', at: vec2(0, 0) },
   ]), RangeError);
 });
 
 test('label text is escaped, never interpreted as markup', () => {
-  const svg = base('demo', CANDIDATE_ILLUSTRATED, [
+  const svg = base('demo', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'a', role: 'input', from: vec2(0, 0), to: vec2(1, 0), label: { text: '<script>x</script>', anchor: 'end' } },
   ]);
   assert.ok(svg.includes('&lt;script&gt;'));
@@ -74,7 +74,7 @@ test('output never contains scripts, foreignObject or external hrefs', () => {
 });
 
 test('zero vector renders a point marker with no direction', () => {
-  const svg = base('demo', CANDIDATE_ILLUSTRATED, [
+  const svg = base('demo', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'z', role: 'input', from: vec2(1, 1), to: vec2(1, 1) },
   ]);
   assert.ok(svg.includes('pv-zero'));
@@ -97,28 +97,28 @@ test('switching themes changes no geometry, only styling', () => {
     }
     return out;
   };
-  for (const theme of CANDIDATE_THEMES) {
+  for (const theme of THEMES) {
     assert.deepEqual(
-      geo(base('t', CANDIDATE_ILLUSTRATED, items)), geo(base('t', theme, items)),
+      geo(base('t', THEME_ILLUSTRATED, items)), geo(base('t', theme, items)),
       `geometry differs under ${theme.id}`,
     );
   }
 });
 
 test('variable labels get pv-label-var; bad style throws', () => {
-  const svg = base('demo', CANDIDATE_ILLUSTRATED, [
+  const svg = base('demo', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'a', role: 'input', from: vec2(0, 0), to: vec2(1, 0), label: { text: 'A', anchor: 'end', style: 'variable' } },
     { kind: 'arrow', id: 'b', role: 'input', from: vec2(0, -0.5), to: vec2(1, -0.5), label: { text: '说明', anchor: 'mid' } },
   ]);
   assert.match(svg, /class="pv-label pv-label-var"[^>]*>A</);
   assert.match(svg, /class="pv-label"[^>]*>说明</);
-  assert.throws(() => base('demo', CANDIDATE_ILLUSTRATED, [
+  assert.throws(() => base('demo', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'a', role: 'input', from: vec2(0, 0), to: vec2(1, 0), label: { text: 'A', anchor: 'end', style: 'bogus' } },
   ]), RangeError);
 });
 
 test('no defs/gradients/filters/patterns are emitted (materials are flat paint)', () => {
-  for (const theme of CANDIDATE_THEMES) {
+  for (const theme of THEMES) {
     const svg = base('g', theme);
     assert.ok(!svg.includes('<defs'), `${theme.id} emits no defs`);
     assert.ok(!svg.includes('url(#'), `${theme.id} emits no url(#) refs`);
@@ -131,17 +131,17 @@ test('readonly items never get handles; handles carry state rings', () => {
   const get = (id) => new RegExp(`data-item-id="${id}">(.*?)</g>`, 's').exec(svg)[1];
   assert.ok(!get('r').includes('pv-handle'), 'readonly must not have a handle');
   assert.ok(get('a').includes('pv-ring'), 'selected handle has a ring');
-  const noHandle = base('demo', CANDIDATE_ILLUSTRATED, [
+  const noHandle = base('demo', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'h', role: 'input', from: vec2(0, 0), to: vec2(1, 0), handle: true, state: 'readonly' },
   ]);
   assert.ok(!noHandle.includes('pv-handle'));
 });
 
 test('overlong labels and bad states are rejected', () => {
-  assert.throws(() => base('demo', CANDIDATE_ILLUSTRATED, [
+  assert.throws(() => base('demo', THEME_ILLUSTRATED, [
     { kind: 'point', id: 'p', role: 'input', at: vec2(0, 0), label: { text: 'x'.repeat(201), anchor: 'mid' } },
   ]), RangeError);
-  assert.throws(() => base('demo', CANDIDATE_ILLUSTRATED, [
+  assert.throws(() => base('demo', THEME_ILLUSTRATED, [
     { kind: 'arrow', id: 'a', role: 'input', from: vec2(0, 0), to: vec2(1, 0), state: 'bogus' },
   ]), RangeError);
 });
