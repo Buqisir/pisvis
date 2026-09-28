@@ -270,7 +270,7 @@ A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
 
 ## I. A1-3 playground 接入与文档同步
 
-环境：Node 24.15.0 / npm 11.12.1 / Playwright 1.63.0（Chromium 1243）。提交 <commit>。
+环境：Node 24.15.0 / npm 11.12.1 / Playwright 1.63.0（Chromium 1243）。提交 13a84c7。
 
 - playground/main.ts 重写：唯一事实源是 arrow@1 场景文档（createScene → updateScene →
   renderScene 自含样式 SVG + 手柄覆盖层）；数值输入 set-start/set-end（合并全精度分量）、
