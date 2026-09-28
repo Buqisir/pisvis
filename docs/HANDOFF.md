@@ -419,19 +419,25 @@ Playwright 1.63.0（Chromium）。分支 `m3-projectile`，提交 d8c48d4。
 - `npm run check`：typecheck 通过；`node --test` 109 通过（103 + 本轮 6：
   模型卡验收值 h20/u10/g10 全等式、边界 t=0/t=T、u=0 退化、t>T 拒绝与
   原子更新、h 改后 T 重算、derived 只读）；`agent-docs:check` 无漂移。
-- `npm run build:demo` 通过；`npm run test:browser` 44 通过（43 +
-  agent-artifact 第 4 能力 SVG 断言，含 pv-path 结构检查）。
+- `npm run build:demo` 通过；`npm run test:browser` 45 通过（43 +
+  agent-artifact 第 4 能力 SVG 断言 + projectile.html 演示页交互 spec：
+  滑块/播放精确停 T/h 改后 T 重算/主题切换/文档经 validateScene 复核）。
 - `npm run test:pack` 通过（tarball 104.5 kB / 94 文件；pack 断言更新为
   capabilities total 4 + 3 个 horizontal-projectile examples）。
 - 人工目检：Chromium 截图 6 组参数（test-results/play/proj*.png），
   标签零重叠（getBBox 实测）、轨迹 done/todo 分段清晰、落点恰在地面、
   u=0 为竖直轨迹与 v 竖直向下。Firefox/WebKit **未跑**。
+- `projectile.html` + `playground/projectile.ts`：演示级时间维度——
+  t 滑块、播放/暂停/重置、0.5/1/2×、后台隐藏冻结墙钟基准、落地精确停
+  T、改 h/u/g 先钳 t 再原子提交。全部经 `authoring` API 边界（set-t/
+  set-h/set-u/set-g/set-theme），页面不自算物理。
 
 ### 已知限制 / 唯一优先下一步
 
-- 本切片只是快照能力：Issue #4 的 ≥3 道题实例、原题/探索分离、播放/
-  暂停/时间滑块、KaTeX 公式面板、vx/vy–t 图、多实例共存、动画控制器
-  生命周期清理、真实拖拽/交互测试、Motion/KaTeX 依赖引入**均未做**。
+- 本切片是快照能力 + 演示级播放页：Issue #4 的 ≥3 道题实例、原题/探索
+  分离（演示页改参数直接改题，无变式状态隔离）、KaTeX 公式面板、
+  vx/vy–t 图、多实例共存与隔离、切模式/加载/重置的订阅清理（当前单
+  实例仅一 rAF）、Motion/KaTeX 依赖引入**均未做**。
 - 标签为固定锚点+像素偏移，只对上述 6 组代表参数实测过；参数空间的
   其余组合（如 h/u 极端比例）可能出现未检测的标签重叠——无自动避让。
 - `alphaDeg`/`thetaDeg` 在对应向量为零时为 null（t=0 位移零 → thetaDeg；

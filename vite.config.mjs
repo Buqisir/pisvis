@@ -9,6 +9,7 @@ export default {
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         gallery: fileURLToPath(new URL('./gallery.html', import.meta.url)),
+        projectile: fileURLToPath(new URL('./projectile.html', import.meta.url)),
       },
     },
   },
