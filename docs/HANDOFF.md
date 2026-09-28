@@ -462,7 +462,9 @@ a51c50a、45154dd。
 
 - `src/questions/`：3 个深冻结原创实例（q-landing-time h45/u10 → T=3,
   R=30；q-range h20/u15 → T=2, R=30；q-velocity-decompose h20/u10/t1 →
-  v=(10,−10)），各带教学目标与中文教学步骤；`editableParams=['h','u','g']`
+  v=(10,−10)），各带教学目标与中文教学步骤；步骤为结构化
+  `TeachingStep{text, cue?}`，cue 可绑时刻 t、注册公式 id 与聚焦区域
+  （scene/graph/formula/conditions）。`editableParams=['h','u','g']`
   （t 不是题设条件）。`session.ts` 以 WeakMap 持有内部状态：
   createSession（可覆盖 instanceId 做同题多实例隔离）、sessionSetTime、
   sessionUpdateParams、sessionApply（通用 op 通道，与参数更新走同一
@@ -488,10 +490,15 @@ a51c50a、45154dd。
   时长均 <1s，纯 tween；cancel() 施加终态并 resolve；reducedMotion
   同步落终态；Node/SSR 无 DOM 安全导入。物理几何与时间不经动效。
 - `projectile.html`/`playground/projectile.ts`：两个完全隔离的题板
-  （各自 session + v-t 图文档 + 播放时钟 + 讲解序列）；题目下拉、
+  （各自 session + v-t 图文档 + 播放时钟 + 讲解态）；题目下拉、
   原题徽标/修改条件/恢复原题、t 滑块、播放/速率/主题、公式网格、
-  讲解演示按钮、页面级减少动效勾选（初始读系统偏好）；后台隐藏
-  暂停按墙钟续播不跳帧；`__pvPanels` 调试快照供浏览器测试复核。
+  页面级减少动效勾选（初始读系统偏好）；后台隐藏暂停按墙钟续播不跳帧；
+  `__pvPanels` 调试快照供浏览器测试复核。
+- 逐步讲解：「讲解演示」进入 guide 模式——入场仍是容器级三拍铺场，
+  之后「上一步/下一步/结束」逐条走 TeachingStep：当前步高亮、计数
+  i/N、cue.t 经会话边界驱动全视图跳时刻、cue.formula 点亮公式项、
+  cue.focus 圈出相关区域；结束清空全部装饰。减少动效下 cue 语义不变
+  （跳时刻/点亮不是动效，照常即时生效）。
 - 依赖：katex@0.18.7 + motion@13.4.0 + @types/katex@0.16.8（发布龄
   22/12 天，满足 ≥7 天规则）；决策记录 docs/decisions/0003-katex.md、
   0004-motion.md；katex 传递依赖 commander 仅 CLI 使用，运行时
@@ -510,10 +517,11 @@ a51c50a、45154dd。
   `agent-docs:check` 无漂移。
 - `npm run build:demo` 通过：KaTeX 字体内置打包；projectile chunk
   288.35 kB（gzip 88.17 kB，含 katex+motion/mini）。
-- `npm run test:browser` 50 通过（Chromium；projectile spec 6 条：
+- `npm run test:browser` 51 通过（Chromium；projectile spec 7 条：
   双面板隔离/文档独立、滑块联动场景+读数+游标、播放精确停 T、切题
-  重建会话、公式随 t 重渲染与 u=0 前提降级、讲解运行/取消/减少动效
-  即时终态、live 文档经 authoring 边界复核）。Firefox/WebKit **未跑**。
+  重建会话、公式随 t 重渲染与 u=0 前提降级、逐步讲解 cue 驱动
+  （跳 t/点亮公式/聚焦区域/退出清装饰）、减少动效下 cue 即时生效与
+  切题退出、live 文档经 authoring 边界复核）。Firefox/WebKit **未跑**。
 - `npm run test:pack` 通过（tarball 125.9 kB / 115 文件；新增
   dist/questions、dist/formula、dist/motion 与 graph examples 入包；
   pisvis/questions 导出可消费）。
@@ -522,9 +530,9 @@ a51c50a、45154dd。
 
 ### 已知限制 / 唯一优先下一步
 
-- 讲解动效是固定三拍容器强调，非逐句讲解脚本；公式与动效之间无
-  逐步联动（同一快照各自渲染）。减少动效只影响动效层，播放不受影响
-  （符合设计：物理时间解析推进）。
+- 逐步讲解按实例自带 TeachingStep 逐条走（cue 绑 t/公式/区域），入场
+  三拍仅为铺场；减少动效只影响铺场与容器强调，cue 语义照常生效
+  （符合设计：物理时间解析推进，高亮是状态不是动画）。
 - 多实例经 instanceId 支持，页面实测 2 块题板；>2 未测。SVG id 隔离
   由 instanceId 保证，同名题例并发由会话隔离保证。
 - v-t 图仅 vx/vy 两条曲线（无 |v| 合速度曲线）；图标签为固定偏移，
