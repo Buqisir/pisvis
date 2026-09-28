@@ -28,6 +28,12 @@ export type SceneItem =
       readonly x: readonly [number, number];
       readonly y: readonly [number, number];
       readonly tick?: number;
+      /** Per-axis tick overrides — function graphs with mixed units. */
+      readonly xTick?: number;
+      readonly yTick?: number;
+      /** Axis names, validated/escaped like label text; default 'x' / 'y'. */
+      readonly xName?: string;
+      readonly yName?: string;
       readonly grid?: boolean;
     }
   | {
@@ -112,6 +118,16 @@ function checkLabel(label: SceneLabel | undefined): SceneLabel | undefined {
   }
   if (label.offsetPx !== undefined) vec2(label.offsetPx.x, label.offsetPx.y);
   return label;
+}
+
+// Axis names obey the label-text rule: plain string, length cap, XML-escaped
+// at emit time (xml() also rejects characters XML cannot represent).
+function checkAxisName(name: string | undefined, fallback: string): string {
+  if (name === undefined) return fallback;
+  if (typeof name !== 'string' || name.length > MAX_LABEL_CHARS) {
+    throw new RangeError(`axis name must be a string of at most ${MAX_LABEL_CHARS} chars`);
+  }
+  return name;
 }
 
 function dashFor(role: SceneRole, theme: ThemeDefinition): string {
@@ -337,25 +353,35 @@ function renderAxes(ctx: Ctx, item: Extract<SceneItem, { kind: 'axes' }>): strin
   const [yMin, yMax] = [item.y[0], item.y[1]];
   vec2(xMin, yMin); vec2(xMax, yMax);
   if (!(xMax > xMin) || !(yMax > yMin)) throw new RangeError('axes ranges must be increasing');
+  if (item.tick !== undefined) positive(item.tick, 'tick');
+  if (item.xTick !== undefined) positive(item.xTick, 'xTick');
+  if (item.yTick !== undefined) positive(item.yTick, 'yTick');
+  const tickX = item.xTick ?? item.tick;
+  const tickY = item.yTick ?? item.tick;
+  const xAxisName = checkAxisName(item.xName, 'x');
+  const yAxisName = checkAxisName(item.yName, 'y');
   // Axes sit on world 0 when visible, else on the nearest range edge.
   const axisY = Math.min(yMax, Math.max(yMin, 0));
   const axisX = Math.min(xMax, Math.max(xMin, 0));
   const parts: string[] = [];
 
-  if (item.grid === true && item.tick !== undefined) {
-    positive(item.tick, 'tick');
+  if (item.grid === true && (tickX !== undefined || tickY !== undefined)) {
     const gridParts: string[] = [];
-    for (let i = Math.ceil(xMin / item.tick); i * item.tick <= xMax + 1e-9; i++) {
-      const t = i * item.tick;
-      const a = worldToScreen(vec2(t, yMin), view);
-      const b = worldToScreen(vec2(t, yMax), view);
-      gridParts.push(`<line class="pv-gridline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
+    if (tickX !== undefined) {
+      for (let i = Math.ceil(xMin / tickX); i * tickX <= xMax + 1e-9; i++) {
+        const t = i * tickX;
+        const a = worldToScreen(vec2(t, yMin), view);
+        const b = worldToScreen(vec2(t, yMax), view);
+        gridParts.push(`<line class="pv-gridline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
+      }
     }
-    for (let i = Math.ceil(yMin / item.tick); i * item.tick <= yMax + 1e-9; i++) {
-      const t = i * item.tick;
-      const a = worldToScreen(vec2(xMin, t), view);
-      const b = worldToScreen(vec2(xMax, t), view);
-      gridParts.push(`<line class="pv-gridline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
+    if (tickY !== undefined) {
+      for (let i = Math.ceil(yMin / tickY); i * tickY <= yMax + 1e-9; i++) {
+        const t = i * tickY;
+        const a = worldToScreen(vec2(xMin, t), view);
+        const b = worldToScreen(vec2(xMax, t), view);
+        gridParts.push(`<line class="pv-gridline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${theme.stroke.grid}"/>`);
+      }
     }
     parts.push(`<g class="pv-grid">${gridParts.join('')}</g>`);
   }
@@ -371,33 +397,35 @@ function renderAxes(ctx: Ctx, item: Extract<SceneItem, { kind: 'axes' }>): strin
   if (xMax > 0) parts.push(axisLine(vec2(xMin, axisY), vec2(xMax, axisY)));
   if (yMax > 0) parts.push(axisLine(vec2(axisX, yMin), vec2(axisX, yMax)));
 
-  if (item.tick !== undefined) {
-    const tick = item.tick;
-    positive(tick, 'tick');
+  if (tickX !== undefined || tickY !== undefined) {
     const ticks: string[] = [];
     // Corner cells collide: skip the x tick just left of the y axis and the
     // y tick just below the x axis (alongside the already-skipped origin).
-    const cornerX = (t: number) => t < axisX && axisX - t <= tick * 1.001;
-    const cornerY = (t: number) => t < axisY && axisY - t <= tick * 1.001;
-    for (let i = Math.ceil(xMin / tick); i * tick <= xMax + 1e-9; i++) {
-      const t = i * tick;
-      if (Math.abs(t) < tick / 2 || cornerX(t)) continue;
-      const p = worldToScreen(vec2(t, axisY), view);
-      ticks.push(`<text class="pv-tick" x="${p.x}" y="${p.y + 14}" text-anchor="middle">${xml(String(Math.round(t * 1e6) / 1e6))}</text>`);
+    if (tickX !== undefined) {
+      const cornerX = (t: number) => t < axisX && axisX - t <= tickX * 1.001;
+      for (let i = Math.ceil(xMin / tickX); i * tickX <= xMax + 1e-9; i++) {
+        const t = i * tickX;
+        if (Math.abs(t) < tickX / 2 || cornerX(t)) continue;
+        const p = worldToScreen(vec2(t, axisY), view);
+        ticks.push(`<text class="pv-tick" x="${p.x}" y="${p.y + 14}" text-anchor="middle">${xml(String(Math.round(t * 1e6) / 1e6))}</text>`);
+      }
     }
-    for (let i = Math.ceil(yMin / tick); i * tick <= yMax + 1e-9; i++) {
-      const t = i * tick;
-      if (Math.abs(t) < tick / 2 || cornerY(t)) continue;
-      const p = worldToScreen(vec2(axisX, t), view);
-      ticks.push(`<text class="pv-tick" x="${p.x - 6}" y="${p.y + 4}" text-anchor="end">${xml(String(Math.round(t * 1e6) / 1e6))}</text>`);
+    if (tickY !== undefined) {
+      const cornerY = (t: number) => t < axisY && axisY - t <= tickY * 1.001;
+      for (let i = Math.ceil(yMin / tickY); i * tickY <= yMax + 1e-9; i++) {
+        const t = i * tickY;
+        if (Math.abs(t) < tickY / 2 || cornerY(t)) continue;
+        const p = worldToScreen(vec2(axisX, t), view);
+        ticks.push(`<text class="pv-tick" x="${p.x - 6}" y="${p.y + 4}" text-anchor="end">${xml(String(Math.round(t * 1e6) / 1e6))}</text>`);
+      }
     }
     parts.push(`<g class="pv-ticks">${ticks.join('')}</g>`);
   }
 
-  const xName = worldToScreen(vec2(xMax, axisY), view);
-  const yName = worldToScreen(vec2(axisX, yMax), view);
-  parts.push(`<text class="pv-axis-name" x="${xName.x - 4}" y="${xName.y - 8}" text-anchor="end">x</text>`);
-  parts.push(`<text class="pv-axis-name" x="${yName.x + 8}" y="${yName.y + 12}" text-anchor="start">y</text>`);
+  const xNameAt = worldToScreen(vec2(xMax, axisY), view);
+  const yNameAt = worldToScreen(vec2(axisX, yMax), view);
+  parts.push(`<text class="pv-axis-name" x="${xNameAt.x - 4}" y="${xNameAt.y - 8}" text-anchor="end">${xml(xAxisName)}</text>`);
+  parts.push(`<text class="pv-axis-name" x="${yNameAt.x + 8}" y="${yNameAt.y + 12}" text-anchor="start">${xml(yAxisName)}</text>`);
   return `<g class="pv-item pv-axes ${stateClass('default')}" data-item-id="${item.id}">${parts.join('')}</g>`;
 }
 

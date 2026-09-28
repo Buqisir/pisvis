@@ -9,7 +9,8 @@ import type { SceneItem } from '../../render/scene.js';
 import type { CapabilityDefinition, SceneDocument } from '../types.js';
 import { axesRange } from './axes.js';
 
-const paramsSchema = v.strictObject({
+// shared with projectile-speed-graph so both views stay on identical bounds
+export const projectileParamsSchema = v.strictObject({
   // editor bounds (product scope, not physical limits) — model card §4
   h: v.pipe(v.number(), v.finite(), v.gtValue(0), v.maxValue(100)),
   u: v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(40)),
@@ -17,9 +18,9 @@ const paramsSchema = v.strictObject({
   // t <= T is a cross-field bound and lives in physicsCheck instead
   t: v.optional(v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(1e6)), 0),
 });
-type ProjectileParams = v.InferOutput<typeof paramsSchema>;
+type ProjectileParams = v.InferOutput<typeof projectileParamsSchema>;
 
-const paramsJsonSchema = toJsonSchema(paramsSchema, { errorMode: 'ignore' }) as Record<string, unknown>;
+const paramsJsonSchema = toJsonSchema(projectileParamsSchema, { errorMode: 'ignore' }) as Record<string, unknown>;
 
 const T_EPS = 1e-9;
 const TRAJ_SEGMENTS = 48;
@@ -191,7 +192,7 @@ export const horizontalProjectileV1: CapabilityDefinition = Object.freeze({
     '恒定重力 g 竖直向下，忽略空气阻力，水平地面 y=0，小球视为质点',
     't>T 不计算穿地运动；本模板不覆盖斜抛、竖直上抛或弹跳',
   ],
-  paramsSchema,
+  paramsSchema: projectileParamsSchema,
   paramsJsonSchema,
   writable: ['h', 'u', 'g', 't'],
   derivedFields: [
