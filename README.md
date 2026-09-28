@@ -6,16 +6,27 @@ pisvis 是独立的物理可视化库，不是每来一道题就临时生成一�
 自己掌握物理对象、题型模板、关系绑定、教学交互和视觉规则；通用几何、响应、校验、排版和渲染能力按需借用。
 从向量、坐标和自己的箭头开始，但不把“所有东西都自己重写”当作目标。
 
+## 为什么值得让 Agent 使用
+
+**目标不只是让 AI 能调用，而是让同一个 Agent 使用 pisvis 后，更容易交付正确、好看、方便修改、可保存复用的教学作品，并持续降低完成任务的总成本。**
+Agent-first、API、MCP 和 Skill 是入口，不是已经领先的证明。我们用真实任务的有/无 pisvis 对照来验证价值；
+若某层封装没有增益，就改进、精简或兼容弃用，不用依赖数、图元数和一次漂亮截图代替成果。
+
+[长期产品原则与评测口径](docs/VALUE_AND_EVALUATION.md) 是后续选题、依赖选择和验收的共同约定。
+[对照评测 B1 #13](https://github.com/Buqisir/pisvis/issues/13) 将先从现有数学能力建立小样本证据，再随物理题型扩展。
+**目前没有据此完成比较或证明全面领先；功能实现、Agent 会用和产品增益三个状态分别记录。**
+
 ## 给本地 Agent：从这里开始
 
+先读 [AGENTS.md](AGENTS.md) 的首要产品原则、[长期价值与评测](docs/VALUE_AND_EVALUATION.md) 和 [交接记录](docs/HANDOFF.md)。
 [Spec 总纲 #2](https://github.com/Buqisir/pisvis/issues/2) 说明自研/依赖边界与产品目标。
 按顺序执行：[M1 #1 工程复现与箭头拖动](https://github.com/Buqisir/pisvis/issues/1)
 → **[A1 #6 Agent-first 创作入口](https://github.com/Buqisir/pisvis/issues/6)**
 → [M2 #3 视觉样板与可复用数学模板](https://github.com/Buqisir/pisvis/issues/3)
 → [M3 #4 平抛题型与多视图联动](https://github.com/Buqisir/pisvis/issues/4)。
 M2 视觉样板（PR #7）已合并；M2 其余部分在 A1 契约之后接入。
-
-先读 [AGENTS.md](AGENTS.md) 和 [交接记录](docs/HANDOFF.md)。每阶段提交小 PR，不一次实现整个路线图。
+B1 #13 横向验证实际增益，不要求回退重做已合并功能，也不建设大型评测平台挡住题型交付。
+每阶段提交小 PR，不一次实现整个路线图；实际进展以最新代码、对应 Issue 和验证记录为准。
 
 ## 当前真的有什么
 
@@ -39,6 +50,7 @@ M2 视觉样板（PR #7）已合并；M2 其余部分在 A1 契约之后接入�
 依赖完整安装、真实锁文件（npm ci）、Vite 构建与 Chromium 交互验收已在 M1 完成。
 Valibot 仅用于 `./agent` 子入口（decisions/0001），根入口保持零依赖；Signals/Motion/KaTeX
 仍未安装，也未引入任何 GPU/布局框架，不把候选写成已完成。
+本表保留实现阶段记录；本次产品原则更新没有复跑上述测试，也没有执行通用 Agent 对照。
 
 ## 建设方向
 
@@ -95,10 +107,12 @@ const svg = renderArrowSvg({
 });
 ```
 
-模板实例、平抛模型、自动受力分析和 Agent Tools 尚未实现；以上仅展示真实可用入口。
+以上展示的是底层 SVG 入口，不是完整物理模型。Agent 创作使用 [消费 Skill](skills/pisvis-authoring/SKILL.md)
+和运行时真实能力目录；不要把已注册的数学示意当成平抛、自动受力分析等尚未完成的物理能力。
 
 ## 设计文档
 
+- [长期产品原则与实际增益评测](docs/VALUE_AND_EVALUATION.md)：为什么值得使用、如何公平对照、何时改进或精简。
 - [产品方向](docs/PRODUCT.md) / [视觉设计](docs/VISUAL_DESIGN.md)：审美样板、教学表达和复用目标。
 - [架构](docs/ARCHITECTURE.md) / [复用与数学绑定](docs/REUSE_AND_BINDINGS.md)：模型、实例、表示、版本和约束。
 - [依赖](docs/DEPENDENCIES.md) / [技术参考](docs/TECH_RADAR.md) / [实验](docs/EXPERIMENTS.md)：先采用什么、研究什么，以及退出条件。

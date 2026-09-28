@@ -1,13 +1,27 @@
 # pisvis · Agent 工作约定
 
+## 首要产品原则：必须增加真实价值
+
+**同一个 Agent 使用 pisvis 后，必须以可核验的结果证明：它在明确任务范围内更容易交付正确、好看、方便修改、可保存复用的教学作品，并持续降低总成本。**
+这是要验证的长期目标，不是现有能力已经全面领先的声明。API/MCP/Skill 接通只是入口；依赖数、图元数、代码量和一次漂亮截图不是成功标准。
+
+开工必须读 [长期价值与评测原则](docs/VALUE_AND_EVALUATION.md)，新功能/重要依赖/模板/工具调整在 Issue 与 PR 写清：真实工作流、不用 pisvis 的替代做法、预期增益、额外代价、验证任务及证据。
+区分工程通过、Agent 会用和同 Agent 对照有增益；新能力未做对照时如实标“增益待验证”。
+必要安全/Bug 修复与纯文档维护可关联父阶段并说明无需模型对照，不用付费评测阻塞修复。
+
+参考 [B1 #13](https://github.com/Buqisir/pisvis/issues/13)：公平比较正常通用 Agent 与同一 Agent + pisvis，不限制前者编码、测试或使用其他合规工具；计入发现、说明阅读、失败重试、人工返工和接入成本。
+不默认嵌套第二个模型重写已支持可视化，不为了多一层 API 重造设施。增益不足就精简、改进或兼容弃用，不能靠隐藏失败、增加用户迁移障碍或宣称永久壁垒维持定位。
+新题型里程碑、重要实现/Skill/依赖变化及模型/宿主升级时复核相关证据；不擅自启动未授权的付费或定时评测。
+
 ## 开工顺序
 
-读取 README、[总纲 #2](https://github.com/Buqisir/pisvis/issues/2)、当前阶段 Issue、docs/HANDOFF.md，
+读取 README、本文首要原则、[总纲 #2](https://github.com/Buqisir/pisvis/issues/2)、当前阶段 Issue、docs/HANDOFF.md，
 再按任务读 docs/PRODUCT.md、docs/ARCHITECTURE.md、docs/DEPENDENCIES.md。
 视觉工作读 docs/VISUAL_DESIGN.md，模板/模型工作读 docs/REUSE_AND_BINDINGS.md。
 学科工作再读 docs/CURRICULUM.md 和有权访问的具体正文。先核对最新 main 与进行中的 PR，不覆盖别人的工作。
 
 **Spec 通过 GitHub Issue 传递，实现用分支与小 PR。顺序为 #1(M1) → #6(A1) → #3(M2) → #4(M3)，不要把总纲一次做完。M2 视觉样板（PR #7）已在 A1 前合并；M2 剩余部分复用 A1 的文档/校验契约。**
+B1 #13 横向建设对照证据，不回退已合并工作，不让评测平台工程挤占真实题型交付。
 
 ## 产品方向
 
@@ -43,6 +57,7 @@ M2 优先 Signals/Valibot，M3 使用 Motion/KaTeX 适配。几何/GPU/布局候
 按当前任务核对官方正式版本、维护/安全状态、许可/资产与体积；精确版本和真实锁文件一起提交。
 初始版本不是永久最新版要求。锁文件存在后使用 npm ci，不以 --force 掩盖错误。
 运行时用到的包如实声明，不能塞进 devDependencies 假装零依赖。
+新增依赖说明它解决的已观察或待验证问题及退出路径；技术新颖不能代替实际工作流收益。
 
 每个实现 PR 跑 npm run check；浏览器改动另跑 npm run build:demo 和真实浏览器测试。
 记录提交、环境、命令、结果、缺测项；初始化的 25 个测试是历史记录，不能当后续变更已通过。
@@ -53,6 +68,8 @@ M2 优先 Signals/Valibot，M3 使用 Motion/KaTeX 适配。几何/GPU/布局候
 
 冷启动消费评测用 `codex exec` 独立会话（临时 CODEX_HOME + tarball 安装），
 模型用 SOL6（`--model`，不用账户默认的 astra；owner 拍板 2026-09-28）。
+该配置属于维护者选择的评测基线，不是模型强弱结论；B1 两臂保持同配置，变化时另建批次。
+保留真实原始结果和失败样本。CI 的确定性/mock 检查不等于 LLM 对照；预算、授权与缺测按长期原则记录。
 
 ## 学科与资料
 
@@ -67,4 +84,5 @@ M2 优先 Signals/Valibot，M3 使用 Motion/KaTeX 适配。几何/GPU/布局候
 
 每个 PR 给出一个可检查的小能力、测试与真实演示，更新 README/Skill/HANDOFF 的真实状态。
 “官方有此 API”“我们已设计”“已经集成”“实际验收通过”四种状态分别写清。
+功能已验收与产品增益已验收也必须分开；使用 Issue/PR 模板记录实际证据或关联父阶段的验证计划。
 交代已知限制与唯一优先下一步；不强推主分支、不删除无关改动，不用假测试结果宣称完成。

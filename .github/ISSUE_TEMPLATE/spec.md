@@ -1,11 +1,19 @@
 ---
 name: Small implementation spec
-about: One small, verifiable step for a local agent
+about: One small, verifiable step with a concrete value hypothesis
 ---
 
-## 目标与使用场景
+<!-- 先读 AGENTS.md 与 docs/VALUE_AND_EVALUATION.md。不要把路线图一次做完。 -->
 
-## 当前基线（commit / 已有能力）
+## 目标与真实使用工作流
+
+## 当前基线（commit / 已有能力 / 正在进行的工作）
+
+## 为什么值得做：价值假设
+
+- 同一 Agent 不用 pisvis 时如何完成？已有观察和待验证假设分开写。
+- 本轮改善哪项：正确性、教学/视觉、方便、复用、耗时或总成本？
+- 新增接入、依赖、维护和迁移成本是什么？哪些能力可复用现有实现？
 
 ## 本轮范围 / 明确不做
 
@@ -13,6 +21,12 @@ about: One small, verifiable step for a local agent
 
 ## 来源（实际阅读的文件与页码；工程推论另列）
 
-## 验收标准与测试
+## 验收与对照计划
 
-## 交付物与未验证部分
+分别列工程正确性、Agent 可用性和实际增益；不可互相冒充。
+说明任务/成功门槛、独立参考结果、证据入口，以及结果不利时如何精简或改进。
+真实模型试验先确定预算与授权；必要修复/纯文档任务可说明无需端到端对照的理由，关联父阶段。
+
+## 交付物、未验证部分与后续触发条件
+
+不要预填“领先”“更省”或“永远不会被替代”；实现完成与产品增益验收分开记录。
