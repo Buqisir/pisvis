@@ -212,7 +212,7 @@ A 升为 v2，B 保留为候选对照；动效层保留（与主题无关）。
 
 ## G. A1-1 创作 API 与 CLI 记录
 
-环境：Node 24.15.0 / npm 11.12.1 / TS 6.0.3 / Playwright 1.63.0（Chromium 1243）。提交 <commit>。
+环境：Node 24.15.0 / npm 11.12.1 / TS 6.0.3 / Playwright 1.63.0（Chromium 1243）。提交 069f81d。
 
 - 依赖（decisions/0001-valibot.md）：valibot@1.5.0、@valibot/to-json-schema@1.8.0（runtime，
   均 MIT、零传递依赖）；@types/node@24.13.5（dev，仅 CLI）。npm ci 干净通过。
