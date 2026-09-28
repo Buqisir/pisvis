@@ -1,5 +1,5 @@
 import {
-  DEFAULT_THEME, THEMES, THEME_ILLUSTRATED, THEME_LINEWORK,
+  DEFAULT_THEME, SCENE_BASE_CSS, THEMES, THEME_ILLUSTRATED, THEME_LINEWORK,
   add, fitViewport, magnitude, renderSceneSvg, themeToCssText, vec2,
 } from '../src/index.js';
 import type { SceneItem, ThemeDefinition, Vec2, Viewport } from '../src/index.js';
@@ -211,7 +211,7 @@ const SCENES: SectionDef[] = [
 const styleEl = document.createElement('style');
 styleEl.textContent = THEMES
   .map((t) => themeToCssText(t, `[data-pv-theme="${t.id}"]`))
-  .join('\n');
+  .join('\n') + SCENE_BASE_CSS;
 document.head.append(styleEl);
 
 function mountSvg(container: HTMLElement, svgText: string): void {

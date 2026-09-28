@@ -19,3 +19,5 @@ export {
   DEFAULT_THEME, THEMES, THEME_ILLUSTRATED, THEME_LINEWORK, getTheme,
 } from './theme/themes.js';
 export { themeToCssText } from './theme/css.js';
+export { SCENE_BASE_CSS } from './theme/scene-css.js';
+export { renderStandaloneSceneSvg } from './render/standalone.js';

@@ -29,8 +29,9 @@ M1 在联网环境核对受支持工具链、正式版本与安全修复，说�
 
 ## 近期采用计划
 
-M2 使用 @preact/signals-core 做实例联动、valibot 做输入/存档校验；二者需先完成小集成测试、版本与许可记录。
-M3 使用 katex 做公式面板、motion 的 JavaScript API 做有限教学序列。
+A1-1 已采用 `valibot@1.5.0` + `@valibot/to-json-schema@1.8.0`（运行时依赖，仅 `./agent` 子入口与 CLI）
+——见 [decisions/0001-valibot](decisions/0001-valibot.md)。@preact/signals-core 推迟到真实响应式
+多视图需求出现时（M2 控制器）。M3 使用 katex 做公式面板、motion 的 JavaScript API 做有限教学序列。
 简单图元和数字输入不因这些依赖而自动引入 React 或其他 UI 框架。
 
 这些是明确的优先选择，不是要求执行者再无期限重做选型。遇到兼容性或维护问题可提出短 ADR 与替代。

@@ -130,6 +130,7 @@ function labelTag(
   p: Vec2,
   dir: Vec2 | null,
   clearance: number,
+  labelPx: number,
 ): string {
   const manual = label.offsetPx ?? { x: 0, y: 0 };
   const central = ' dominant-baseline="central"';
@@ -166,10 +167,16 @@ function labelTag(
         textAnchor = 'end';
         baseline = central;
       } else {
-        const px = -dir.y;
-        const py = dir.x;
-        x += px * clearance; y += py * clearance;
-        textAnchor = px > 0.3 ? 'start' : px < -0.3 ? 'end' : 'middle';
+        // diagonal: perpendicular, at least clearance + half the label's own
+        // height so the text bbox never touches the shaft; side picked to
+        // maximize distance from the axes (and thereby the origin corner)
+        const gap = clearance + labelPx / 2;
+        const a = vec2(-dir.y, dir.x);
+        const b = vec2(dir.y, -dir.x);
+        const away = (n: Vec2) => Math.min(Math.abs(p.x + n.x * gap), Math.abs(p.y + n.y * gap));
+        const n = away(b) > away(a) ? b : a;
+        x += n.x * gap; y += n.y * gap;
+        textAnchor = n.x > 0.3 ? 'start' : n.x < -0.3 ? 'end' : 'middle';
         baseline = central;
       }
     }
@@ -240,7 +247,7 @@ function renderArrow(ctx: Ctx, item: Extract<SceneItem, { kind: 'arrow' }>): str
     const anchorPx = label.anchor === 'start' ? s
       : label.anchor === 'end' ? e
       : scale(add(s, e), 0.5);
-    parts.push(labelTag(label, anchorPx, dir, clearance));
+    parts.push(labelTag(label, anchorPx, dir, clearance, theme.text.label));
   }
   if (hasHandle) {
     parts.push(handleGroup(ctx, e, state));
@@ -266,7 +273,7 @@ function renderPoint(ctx: Ctx, item: Extract<SceneItem, { kind: 'point' }>): str
     parts.push(`<circle class="pv-ring" cx="${p.x}" cy="${p.y}" r="${theme.point.handleRadius + 4}"/>`);
   }
   if (label !== undefined) {
-    parts.push(labelTag(label, p, null, labelClearance(theme, false)));
+    parts.push(labelTag(label, p, null, labelClearance(theme, false), theme.text.label));
   }
   return `<g class="pv-item pv-point pv-role-${role} ${stateClass(state)}" data-item-id="${item.id}">${parts.join('')}</g>`;
 }
