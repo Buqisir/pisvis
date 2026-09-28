@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pisvis": {
+      "command": "node",
+      "args": ["<absolute-path>/dist/mcp/server.js"]
+    },
+    "pisvis-via-npx": {
+      "command": "npx",
+      "args": ["-y", "pisvis", "pisvis-mcp"]
+    }
+  }
+}

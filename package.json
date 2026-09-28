@@ -21,8 +21,11 @@
   "files": [
     "dist",
     "skills",
+    "llms.txt",
+    "docs",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "AGENTS.md"
   ],
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -32,20 +35,26 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "npm run build && node --test tests/*.test.mjs",
     "test:browser": "npm run build && playwright test",
-    "check": "npm run typecheck && npm test",
-    "verify:all": "npm run check && npm run build:demo"
+    "check": "npm run typecheck && npm test && npm run agent-docs:check",
+    "verify:all": "npm run check && npm run build:demo",
+    "agent-docs:write": "npm run build && node scripts/agent-docs.mjs --write",
+    "agent-docs:check": "node scripts/agent-docs.mjs --check",
+    "test:pack": "node scripts/pack-test.mjs"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
     "@playwright/test": "1.63.0",
     "@types/node": "24.13.5",
     "typescript": "6.0.3",
     "vite": "8.3.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
     "@valibot/to-json-schema": "1.8.0",
     "valibot": "1.5.0"
   },
   "bin": {
-    "pisvis": "./dist/cli/pisvis.js"
+    "pisvis": "./dist/cli/pisvis.js",
+    "pisvis-mcp": "./dist/mcp/server.js"
   }
 }

@@ -1,0 +1,46 @@
+{
+  "document": {
+    "schemaVersion": 1,
+    "instanceId": "arrow-example",
+    "templateId": "arrow",
+    "templateVersion": 1,
+    "unit": "dimensionless",
+    "params": {
+      "start": {
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "x": 3,
+        "y": 4
+      },
+      "label": "向量"
+    },
+    "presentation": {
+      "theme": {
+        "id": "illustrated",
+        "version": 2
+      },
+      "canvas": {
+        "width": 640,
+        "height": 360
+      },
+      "viewport": {
+        "mode": "fit"
+      }
+    }
+  },
+  "operations": [
+    {
+      "op": "set-end",
+      "value": {
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "op": "set-label",
+      "value": "位移 d"
+    }
+  ]
+}

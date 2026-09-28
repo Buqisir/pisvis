@@ -24,6 +24,7 @@
     "playground/**/*.ts"
   ],
   "exclude": [
-    "src/cli"
+    "src/cli",
+    "src/mcp"
   ]
 }
